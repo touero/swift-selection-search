@@ -13,6 +13,11 @@ The upstream project is a Firefox extension. This fork updates its background pr
 
 Chrome does not provide all of the APIs available in Firefox. Consequently, this version cannot read or import the browser's built-in search engines, and Chrome context-menu items cannot distinguish between middle- and right-button clicks. Custom search engines are unaffected.
 
+<p align="center">
+  <img src=".public/preview.png" width="49%" alt="Preview 1">
+  <img src=".public/preview_setting.png" width="49%" alt="Preview 2">
+</p>
+
 ## Build
 
 Node.js 22 or a compatible version is recommended:
@@ -35,37 +40,11 @@ The generated JavaScript files are written to the `src` directory.
 
 Chrome extensions cannot run on `chrome://` pages or Chrome Web Store pages due to browser security restrictions.
 
-## Automated releases
+## Releases
 
-Pushing a tag in the format `v<manifest-version>` triggers `.github/workflows/release.yml`, which:
-
-1. Verifies that the tag matches the version in `src/manifest.json`.
-2. type-checks and builds the extension.
-3. Creates a ZIP package.
-4. Creates a GitHub Release and attaches the ZIP package.
-5. Uploads the package to the Chrome Web Store and submits it for review and publication.
-
-Example:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-Configure the following secrets under **GitHub repository → Settings → Secrets and variables → Actions**:
-
-| Secret | Description |
-| --- | --- |
-| `CHROME_PUBLISHER_ID` | Publisher ID shown in the Chrome Web Store Developer Dashboard |
-| `CHROME_EXTENSION_ID` | ID of the extension in the Chrome Web Store |
-| `CHROME_CLIENT_ID` | Google OAuth client ID |
-| `CHROME_CLIENT_SECRET` | Google OAuth client secret |
-| `CHROME_REFRESH_TOKEN` | OAuth refresh token with the `https://www.googleapis.com/auth/chromewebstore` scope |
-
-The extension entry must first be created manually in the Chrome Web Store, including its initial store listing. Automated releases retain the existing visibility settings. Uploaded versions remain subject to Chrome Web Store review.
+See [RELEASING.md](RELEASING.md) for Chrome Web Store and GitHub automated release instructions.
 
 ## Upstream project and license
 
 - Upstream: [CanisLupus/swift-selection-search](https://github.com/CanisLupus/swift-selection-search)
-- Original author: Daniel Lobo
 - License: [MIT](LICENSE)
