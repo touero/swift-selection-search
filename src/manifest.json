@@ -1,36 +1,32 @@
 {
-	"manifest_version": 2,
+	"manifest_version": 3,
 	"name": "Swift Selection Search",
-	"version": "3.48.0",
-
+	"version": "1.0.0",
 	"description": "Swiftly access your search engines in a popup panel when you select text in a webpage. Context search menu also included!",
 	"homepage_url": "https://github.com/CanisLupus/swift-selection-search",
-
+	"minimum_chrome_version": "102",
 	"icons": {
 		"48": "icons/icon48.png",
 		"96": "icons/icon96.png"
 	},
-
 	"background": {
-		"page": "swift-selection-search.html"
+		"service_worker": "service-worker.js"
 	},
-
-	"applications": {
-		"gecko": {
-			"id": "jid1-KdTtiCj6wxVAFA@jetpack",
-			"strict_min_version": "66.0"
-		}
-	},
-
 	"options_ui": {
-		"browser_style": true,
 		"page": "settings/settings.html",
 		"open_in_tab": true
 	},
-
-	"permissions": ["<all_urls>", "clipboardWrite", "contextMenus", "search", "storage", "webNavigation", "webRequest", "webRequestBlocking"],
+	"permissions": ["clipboardWrite", "contextMenus", "search", "storage"],
+	"host_permissions": ["<all_urls>"],
 	"optional_permissions": ["downloads", "tabs"],
-
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content-scripts/selectionchange.js", "content-scripts/page-script.js"],
+			"run_at": "document_start",
+			"all_frames": true
+		}
+	],
 	"commands": {
 		"open-popup": {
 			"suggested_key": { "default": "Ctrl+Shift+Space" },
@@ -41,6 +37,10 @@
 			"description": "Switch popup opening behaviour between \"Auto\" and \"Keyboard-only\""
 		}
 	},
-
-	"web_accessible_resources": ["res/*"]
+	"web_accessible_resources": [
+		{
+			"resources": ["res/*", "res/sss-engine-icons/*", "res/msg-pages/*"],
+			"matches": ["<all_urls>"]
+		}
+	]
 }

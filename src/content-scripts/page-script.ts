@@ -58,7 +58,7 @@ namespace ContentScript
 	if (DEBUG) {
 		// To have all log messages in the same console, we always request the background script to log.
 		// Otherwise content script messages will be in the Web Console instead of the Dev Tools Console.
-		var log = msg => browser.runtime.sendMessage(new LogMessage(msg));
+		var log = msg => chrome.runtime.sendMessage(new LogMessage(msg));
 	}
 
 	// Globals
@@ -74,10 +74,42 @@ namespace ContentScript
 
 	setTimeout(() => PopupCreator.onSearchEngineClick = onSearchEngineClick, 0);
 
-	// be prepared for messages from background script
-	browser.runtime.onMessage.addListener(onMessageReceived);
+	// Be prepared for updates, then request initial activation. MV3 loads these
+	// scripts statically instead of injecting them from the service worker.
+	chrome.runtime.onMessage.addListener(onMessageReceived);
+	requestInitialActivation();
 
 	if (DEBUG) { log("content script has started!"); }
+
+	// A newly started MV3 worker may need a moment to restore settings. Retry
+	// transient failures instead of leaving this page permanently inactive.
+	function requestInitialActivation(attempt: number = 0)
+	{
+		// Old content-script instances remain briefly after an unpacked extension
+		// is reloaded. Never call an invalidated extension context.
+		if (!chrome.runtime?.id) return;
+
+		const retryOrReport = error => {
+			if (attempt < 4 && chrome.runtime?.id) {
+				setTimeout(() => requestInitialActivation(attempt + 1), 250 * (attempt + 1));
+			} else {
+				getErrorHandler("Error acquiring initial activation settings.")?.(error);
+			}
+		};
+
+		try {
+			chrome.runtime.sendMessage({ type: MessageType.GetActivationSettings }).then(
+				data => data?.activationSettings
+					? activate(data.activationSettings, data.isPageBlocked)
+					: retryOrReport("Activation settings were unavailable."),
+				retryOrReport
+			);
+		} catch (error) {
+			// A synchronous "Extension context invalidated" means this is an old
+			// page instance. Refreshing the page installs the new content script.
+			if (chrome.runtime?.id) retryOrReport(error);
+		}
+	}
 
 	// act when the background script requests something from this script
 	function onMessageReceived(msg, sender, callbackFunc)
@@ -168,8 +200,8 @@ namespace ContentScript
 		if (!isPageBlocked)
 		{
 			if (activationSettings.popupOpenBehaviour === SSS.PopupOpenBehaviour.Auto || activationSettings.popupOpenBehaviour === SSS.PopupOpenBehaviour.HoldAlt) {
+				selectionchange.onChange = onSelectionChange;
 				selectionchange.start();
-				document.addEventListener("customselectionchange", onSelectionChange);
 			}
 			else if (activationSettings.popupOpenBehaviour === SSS.PopupOpenBehaviour.MiddleMouse) {
 				document.addEventListener("mousedown", onMouseDown);
@@ -189,8 +221,8 @@ namespace ContentScript
 		document.removeEventListener("mousedown", onMouseDown);
 		document.removeEventListener("mouseup", onMouseUp);
 
-		document.removeEventListener("customselectionchange", onSelectionChange);
 		selectionchange.stop();
+		selectionchange.onChange = null;
 
 		document.documentElement.removeEventListener("keydown", onKeyDown);
 		document.documentElement.removeEventListener("mousedown", maybeHidePopup);
@@ -199,7 +231,7 @@ namespace ContentScript
 
 		// remove the popup from the page (other listeners in the popup are destroyed along with their objects)
 		if (popup !== null) {
-			document.documentElement.removeChild(popup);
+			popup.element.remove();
 			popup = null;
 		}
 
@@ -246,7 +278,7 @@ namespace ContentScript
 
 	function acquireSettings(onSettingsAcquired: () => void)
 	{
-		browser.runtime.sendMessage(new GetPopupSettingsMessage()).then(
+		chrome.runtime.sendMessage(new GetPopupSettingsMessage()).then(
 			popupSettings => {
 				settings = popupSettings.settings;
 				sssIcons = popupSettings.sssIcons;
@@ -375,27 +407,18 @@ namespace ContentScript
 
 	function createPopup(settings: SSS.Settings): PopupCreator.SSSPopup
 	{
-		// only define new element if not already defined (can get here multiple times if settings are reloaded)
-		if (!customElements.get("sss-popup"))
-		{
-			// temp class that locks in settings as arguments to SSSPopup
-			class SSSPopupWithSettings extends PopupCreator.SSSPopup {
-				constructor() { super(getSettings(), getIcons()); }
-			}
-
-			customElements.define("sss-popup", SSSPopupWithSettings);
-		}
-
-		const popup = document.createElement("sss-popup") as PopupCreator.SSSPopup;
-
-		document.documentElement.appendChild(popup);
+		// Chrome exposes a null CustomElementRegistry in some isolated content
+		// script worlds. Use a normal host element with a closed shadow root; this
+		// is equally isolated and does not touch the page's custom-element registry.
+		const popup = new PopupCreator.SSSPopup(getSettings(), getIcons());
+		document.documentElement.appendChild(popup.element);
 
 		// register popup events
 		if (!settings.useEngineShortcutWithoutPopup) {	// if we didn't register the keydown listener before, do it now
 			document.documentElement.addEventListener("keydown", onKeyDown);
 		}
 		document.documentElement.addEventListener("mousedown", maybeHidePopup);	// hide popup from a press down anywhere...
-		popup.addEventListener("mousedown", ev => ev.stopPropagation());	// ...except on the popup itself
+		popup.element.addEventListener("mousedown", ev => ev.stopPropagation());	// ...except on the popup itself
 
 		if (settings.hidePopupOnPageScroll) {
 			window.addEventListener("scroll", maybeHidePopup);
@@ -499,7 +522,7 @@ namespace ContentScript
 
 			const message = createSearchMessage(engine, settings);
 			message.openingBehaviour = openingBehaviour;
-			browser.runtime.sendMessage(message);
+			chrome.runtime.sendMessage(message);
 		}
 		else
 		{
@@ -513,7 +536,7 @@ namespace ContentScript
 		if (engine) {
 			const message = createSearchMessage(engine, settings);
 			message.openingBehaviour = settings.shortcutBehaviour;
-			browser.runtime.sendMessage(message);
+			chrome.runtime.sendMessage(message);
 		}
 	}
 
@@ -584,7 +607,7 @@ namespace ContentScript
 				message.openingBehaviour = settings.mouseRightButtonBehaviour;
 			}
 
-			browser.runtime.sendMessage(message);
+			chrome.runtime.sendMessage(message);
 		}
 	}
 
@@ -665,24 +688,25 @@ namespace PopupCreator
 {
 	export let onSearchEngineClick = null;
 
-	export class SSSPopup extends HTMLElement
+	export class SSSPopup
 	{
+		element: HTMLDivElement;
 		content: HTMLDivElement;
 		inputField: HTMLInputElement;
 		enginesContainer: HTMLDivElement;
 
 		constructor(settings: SSS.Settings, sssIcons: { [id: string] : SSS.SSSIconDefinition; })
 		{
-			super();
+			this.element = document.createElement("div");
+			this.element.className = "sss-popup-host";
+			const shadowRoot = this.element.attachShadow({mode: "closed"});
 
-			Object.setPrototypeOf(this, SSSPopup.prototype);	// needed so that instanceof and casts work
-
-			const shadowRoot = this.attachShadow({mode: "closed"});
-
-			const css = this.generateStylesheet(settings);
-			var style = document.createElement("style");
-			style.appendChild(document.createTextNode(css));
-			shadowRoot.appendChild(style);
+			// A <style> element inserted into the page is subject to the host's
+			// style-src CSP. Constructable stylesheets keep the popup isolated and
+			// avoid weakening or rewriting the website's security policy.
+			const stylesheet = new CSSStyleSheet();
+			stylesheet.replaceSync(this.generateStylesheet(settings));
+			shadowRoot.adoptedStyleSheets = [stylesheet];
 
 			// create popup parent (will contain all icons)
 			this.content = document.createElement("div");
@@ -724,6 +748,7 @@ namespace PopupCreator
 				}
 
 				.sss-content {
+					font-family: system-ui, sans-serif !important;
 					font-size: 0px !important;
 					direction: ltr !important;
 					position: absolute;
@@ -760,6 +785,7 @@ namespace PopupCreator
 
 				.sss-input-field {
 					box-sizing: border-box;
+					font-family: system-ui, sans-serif !important;
 					width: calc(100% - 8px);
 					border: 1px solid #ccc;
 					border-radius: ${settings.popupBorderRadius}px;
@@ -870,7 +896,7 @@ namespace PopupCreator
 					const sssEngine = engine as SSS.SearchEngine_SSS;
 					const sssIcon = sssIcons[sssEngine.id];
 
-					const iconImgSource = browser.extension.getURL(sssIcon.iconPath);
+					const iconImgSource = chrome.runtime.getURL(sssIcon.iconPath);
 					const isInteractive = sssIcon.isInteractive !== false;	// undefined or true means it's interactive
 					icon = this.setupEngineIcon(sssEngine, iconImgSource, sssIcon.name, isInteractive, settings);
 
@@ -997,7 +1023,7 @@ namespace PopupCreator
 
 		isReceiverOfEvent(ev: Event)
 		{
-			return ev.target === this;
+			return ev.target === this.element;
 		}
 
 		setFocusOnInputFieldText()

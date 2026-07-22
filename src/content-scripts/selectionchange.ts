@@ -1,119 +1,84 @@
-// Original script by Jared Jacobs, located at github.com/2is10/selectionchange-polyfill
-// License: http://unlicense.org
-// Adapted for Swift Selection Search by Daniel Lobo.
+// Selection trigger adapted for Swift Selection Search.
+//
+// The Firefox version compared DOM Range objects on every interaction. Reading
+// ranges can force style/font resolution in Chrome and makes unrelated page or
+// extension CSP errors appear to originate from SSS. Chrome only needs the
+// originating user events; page-script.ts reads the actual selection once.
 
 namespace selectionchange
 {
 	const MAC = /^Mac/.test(navigator.platform);
-	const MAC_MOVE_KEYS = new Set([65, 66, 69, 70, 78, 80]); // A, B, E, F, P, N from support.apple.com/en-ie/HT201236
+	const MAC_MOVE_KEYS = new Set([65, 66, 69, 70, 78, 80]);
 	export const modifierKey = MAC ? "metaKey" : "ctrlKey";
 
-	let ranges = null;
-
-	export function start() {
-		ranges = getSelectedRanges();
-		document.addEventListener("input", onInput, true);
-		document.addEventListener("keydown", onKeyDown, true);
-		document.addEventListener("mouseup", onMouseUp, true);
-	}
-
-	export function stop() {
-		ranges = null;
-		document.removeEventListener("input", onInput, true);
-		document.removeEventListener("keydown", onKeyDown, true);
-		document.removeEventListener("mouseup", onMouseUp, true);
-	}
-
-	export class CustomSelectionChangeEvent extends CustomEvent<any>
+	export class CustomSelectionChangeEvent extends Event
 	{
 		altKey: boolean;
 		isMouse: boolean;
 		event: Event;
 	}
 
-	function getSelectedRanges()
+	// Direct callback inside this extension's isolated world. No DOM custom
+	// events are emitted, so pages and other extensions cannot observe it.
+	export let onChange: (event: CustomSelectionChangeEvent) => void = null;
+
+	let isStarted = false;
+
+	export function start()
 	{
-		const selection = document.getSelection();
-		const newRanges = [];
-
-		if (selection !== null) {
-			for (let i = 0; i < selection.rangeCount; i++) {
-				newRanges.push(selection.getRangeAt(i));
-			}
-		}
-
-		return newRanges;
+		if (isStarted) return;
+		isStarted = true;
+		document.addEventListener("input", onInput, true);
+		document.addEventListener("keydown", onKeyDown, true);
+		document.addEventListener("mouseup", onMouseUp, true);
 	}
 
-	function onInput(ev)
+	export function stop()
 	{
-		if (!isInputField(ev.target)) {
-			dispatchEventIfSelectionChanged(true, ev, false);
-		}
+		if (!isStarted) return;
+		isStarted = false;
+		document.removeEventListener("input", onInput, true);
+		document.removeEventListener("keydown", onKeyDown, true);
+		document.removeEventListener("mouseup", onMouseUp, true);
 	}
 
-	function onKeyDown(ev)
+	function onInput(ev: Event)
+	{
+		if (!isInputField(ev.target)) notify(ev, false);
+	}
+
+	function onKeyDown(ev: KeyboardEvent)
 	{
 		const code = ev.keyCode;
-
-		if ((code === 65 && ev[modifierKey] && !ev.shiftKey && !ev.altKey) // Ctrl-A or Cmd-A
-			|| (code >= 35 && code <= 40 && ev.shiftKey) // home, end and arrow keys
+		if ((code === 65 && ev[modifierKey] && !ev.shiftKey && !ev.altKey)
+			|| (code >= 35 && code <= 40 && ev.shiftKey)
 			|| (ev.ctrlKey && MAC && MAC_MOVE_KEYS.has(code)))
 		{
-			if (!isInputField(ev.target)) {	// comment to enable selections with keyboard
-				setTimeout(() => dispatchEventIfSelectionChanged(true, ev, false), 0);
+			if (!isInputField(ev.target)) {
+				setTimeout(() => notify(ev, false), 0);
 			}
 		}
 	}
 
-	function onMouseUp(ev)
+	function onMouseUp(ev: MouseEvent)
 	{
 		if (ev.button === 0) {
-			setTimeout(() => dispatchEventIfSelectionChanged(isInputField(ev.target), ev, true), 0);
+			setTimeout(() => notify(ev, true), 0);
 		}
 	}
 
-	function dispatchEventIfSelectionChanged(force, ev, isMouse)
+	function notify(sourceEvent: Event, isMouse: boolean)
 	{
-		const newRanges = getSelectedRanges();
-
-		if (force || !areAllRangesEqual(newRanges, ranges)) {
-			ranges = newRanges;
-			const event = new CustomSelectionChangeEvent("customselectionchange");
-			event.altKey = ev.altKey;
-			event.isMouse = isMouse;
-			event.event = ev;
-			setTimeout(() => document.dispatchEvent(event), 0);
-		}
+		if (!onChange) return;
+		const event = new CustomSelectionChangeEvent("sss-internal-selectionchange");
+		event.altKey = (sourceEvent as MouseEvent | KeyboardEvent).altKey ?? false;
+		event.isMouse = isMouse;
+		event.event = sourceEvent;
+		onChange(event);
 	}
 
-	function isInputField(elem)
+	function isInputField(elem: EventTarget): boolean
 	{
-		return elem.tagName === "INPUT" || elem.tagName === "TEXTAREA";
-	}
-
-	// compares two lists of ranges to see if the ranges are the exact same
-	function areAllRangesEqual(rs1, rs2)
-	{
-		if (rs1.length !== rs2.length) {
-			return false;
-		}
-
-		for (let i = 0; i < rs1.length; i++)
-		{
-			const r1 = rs1[i];
-			const r2 = rs2[i];
-
-			const areEqual = r1.startContainer === r2.startContainer
-						&& r1.startOffset === r2.startOffset
-						&& r1.endContainer === r2.endContainer
-						&& r1.endOffset === r2.endOffset;
-
-			if (!areEqual) {
-				return false;
-			}
-		}
-
-		return true;
+		return elem instanceof HTMLInputElement || elem instanceof HTMLTextAreaElement;
 	}
 }

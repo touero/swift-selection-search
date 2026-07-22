@@ -379,7 +379,7 @@ namespace SearchVariables
 						const rangeStartIndex = rangeStartIndexString.length > 0 ? Number(rangeStartIndexString) : null;
 						const rangeEndIndex = rangeEndIndexString.length > 0 ? Number(rangeEndIndexString) : null;
 
-						if (rangeStartIndex === NaN || rangeEndIndex === NaN) {
+						if (Number.isNaN(rangeStartIndex) || Number.isNaN(rangeEndIndex)) {
 							return SearchVariableModifications.createDefault();
 						} else {
 							modifications.modifications.push(new SearchVariableSlice(rangeStartIndex, rangeEndIndex));

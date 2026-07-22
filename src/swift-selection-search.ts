@@ -454,32 +454,32 @@ namespace SSS
 	const sss: SSS = new SSS();
 
 	// show message on installation
-	browser.runtime.onInstalled.addListener(details => {
+	chrome.runtime.onInstalled.addListener(details => {
 		if (details.reason == "install") {
-			browser.tabs.create({ url: "/res/msg-pages/sss-intro.html" });
+			chrome.tabs.create({ url: "/res/msg-pages/sss-intro.html" });
 		}
 	});
 
-	// get browser version and then startup
-	browser.runtime.getBrowserInfo().then(browserInfo => {
-		browserVersion = parseInt(browserInfo.version.split(".")[0]);
-		if (DEBUG) { log("Firefox is version " + browserVersion); }
-
-		// Clear all settings (for test purposes only).
-		// Since the mistake from version 3.43.0, "removeToUse" was added to the call
-		// and the add-on submission script (not included in the repository) now
-		// checks for calls to the clear() function.
-
-		// browser.storage.local.cle_removeToUse_ar();
-		// browser.storage.sync.cle_removeToUse_ar();
-
-		// register with content script messages and changes to settings
-		browser.runtime.onMessage.addListener(onContentScriptMessage);
-		browser.storage.onChanged.addListener(onSettingsChanged);
-
-		// Get settings. Setup happens when they are ready.
-		browser.storage.local.get().then(onSettingsAcquired, getErrorHandler("Error getting settings for setup."));
+	// MV3 service workers can be stopped at any time. Register the message listener
+	// synchronously, then hold messages until settings have been initialized.
+	let initializationPromise: Promise<void>;
+	chrome.runtime.onMessage.addListener((msg, sender, callbackFunc) => {
+		initializationPromise.then(() => onContentScriptMessage(msg, sender, callbackFunc));
+		return true;
 	});
+	chrome.storage.onChanged.addListener(onSettingsChanged);
+
+	initializationPromise = initialize();
+
+	async function initialize(): Promise<void>
+	{
+		const versionMatch = navigator.userAgent.match(/(?:Chrome|Chromium)\/(\d+)/);
+		browserVersion = versionMatch ? parseInt(versionMatch[1]) : 0;
+		if (DEBUG) { log("Chrome is version " + browserVersion); }
+
+		const settings = await chrome.storage.local.get();
+		onSettingsAcquired(settings as Settings);
+	}
 
 	/* ------------------------------------ */
 	/* -------------- SETUP --------------- */
@@ -500,8 +500,9 @@ namespace SSS
 		}
 
 		if (doSaveSettings) {
-			browser.storage.local.set(settings);
-			return;	// calling "set" will trigger this whole function again, so quit before wasting time
+			// Continue setup immediately as well as persisting the defaults. This is
+			// important because content scripts may message a newly started worker.
+			chrome.storage.local.set(settings);
 		}
 
 		uniqueIdToEngineDictionary = {};
@@ -730,30 +731,30 @@ namespace SSS
 		if (DEBUG) { log("onSettingsChanged in " + area); }
 		if (DEBUG) { log(changes); }
 
-		browser.storage.local.get()
+		chrome.storage.local.get()
 			.then(onSettingsAcquired, getErrorHandler("Error getting settings after onSettingsChanged."))
 			.then(updateSettingsOnAllTabs, getErrorHandler("Error updating settings on all tabs."));
 	}
 
 	function updateSettingsOnAllTabs()
 	{
-		browser.tabs.query({}).then(tabs => {
+		chrome.tabs.query({}).then(tabs => {
 			for (const tab of tabs) {
 				activateTab(tab);
 			}
 		}, getErrorHandler("Error querying tabs."));
 	}
 
-	function activateTab(tab: browser.tabs.Tab)
+	function activateTab(tab: chrome.tabs.Tab)
 	{
-		browser.tabs.sendMessage(tab.id, {
+		chrome.tabs.sendMessage(tab.id, {
 			type: "activate",
 			activationSettings: sss.activationSettingsForContentScript,
 			isPageBlocked: isPageBlocked(tab),
 		}).then(() => {}, () => {});	// suppress errors
 	}
 
-	function isPageBlocked(tab: browser.tabs.Tab): boolean
+	function isPageBlocked(tab: chrome.tabs.Tab): boolean
 	{
 		if (sss.blockedWebsitesCache === undefined) return false;	// can happen when reloading extension in about:debugging
 		if (sss.blockedWebsitesCache.length == 0) return false;
@@ -806,16 +807,25 @@ namespace SSS
 		{
 			// messages from content script
 
+			case "getActivationSettings":
+				callbackFunc({
+					activationSettings: sss.activationSettingsForContentScript,
+					isPageBlocked: isPageBlocked(sender.tab),
+				});
+				break;
+
 			case "getPopupSettings":
 				callbackFunc(sss.settingsForContentScript);
 				break;
 
 			case "engineClick":
 				onSearchEngineClick(msg.engine, msg.openingBehaviour, msg.selection, msg.href, null);
+				callbackFunc();
 				break;
 
 			case "log":
 				if (DEBUG) { log("[content script log]", msg.log); }
+				callbackFunc();
 				break;
 
 			// messages from settings page
@@ -867,16 +877,16 @@ namespace SSS
 	/* ----------- CONTEXT MENU ----------- */
 	/* ------------------------------------ */
 
-	function setup_ContextMenu()
+	async function setup_ContextMenu()
 	{
-		// cleanup first
-		browser.contextMenus.onClicked.removeListener(onContextMenuItemClicked);
-		browser.contextMenus.removeAll();
+		// Cleanup must finish before IDs are recreated in Chrome.
+		chrome.contextMenus.onClicked.removeListener(onContextMenuItemClicked);
+		await chrome.contextMenus.removeAll();
 
 		if (sss.settings.enableEnginesInContextMenu !== true) return;
 
 		// define parent menu
-		browser.contextMenus.create({
+		chrome.contextMenus.create({
 			id: "sss",
 			title: sss.settings.contextMenuString,
 			contexts: ["selection"/* , "link" */],
@@ -896,18 +906,19 @@ namespace SSS
 			if (!engine.isEnabledInContextMenu) continue;
 
 			const contextMenuOption = {
-				id: undefined,
+				// MV3 event pages/service workers require an explicit ID for every
+				// item, including separators.
+				id: "" + i,
 				title: undefined,
 				type: undefined,
 				parentId: "sss",
-				icons: undefined,
 			};
 
 			if (engine.type === SearchEngineType.SSS) {
 				const concreteEngine = engine as SearchEngine_SSS;
 				if (concreteEngine.id === "separator") {
 					contextMenuOption.type = "separator";
-					browser.contextMenus.create(contextMenuOption);
+					chrome.contextMenus.create(contextMenuOption);
 					continue;
 				}
 				contextMenuOption.title = sssIcons[concreteEngine.id].name;
@@ -916,40 +927,19 @@ namespace SSS
 				contextMenuOption.title = concreteEngine.name;
 			}
 
-			let icon: string;
-
-			if (engine.type === SearchEngineType.SSS) {
-				const concreteEngine = engine as SearchEngine_SSS;
-				icon = sssIcons[concreteEngine.id].iconPath;
-			}
-			else {
-				const iconUrl: string = (engine as SearchEngine_NonSSS).iconUrl;
-
-				if (iconUrl.startsWith("data:")) {
-					icon = iconUrl;
-				} else {
-					icon = sss.settings.searchEnginesCache[iconUrl];
-					if (icon === undefined) {
-						icon = iconUrl;
-					}
-				}
-			}
-
-			contextMenuOption.icons = { "32": icon };
-
-			contextMenuOption.id = "" + i;
-			browser.contextMenus.create(contextMenuOption);
+			// Chrome's contextMenus API does not support per-item icons.
+			chrome.contextMenus.create(contextMenuOption);
 		}
 
-		browser.contextMenus.onClicked.addListener(onContextMenuItemClicked);
+		chrome.contextMenus.onClicked.addListener(onContextMenuItemClicked);
 	}
 
-	function onContextMenuItemClicked(info: browser.contextMenus.OnClickData, tab: browser.tabs.Tab)
+	function onContextMenuItemClicked(info: chrome.contextMenus.OnClickData, tab: chrome.tabs.Tab)
 	{
 		const menuId: number = parseInt(info.menuItemId as string);
 		const selectedEngine: SearchEngine = sss.settings.searchEngines[menuId];
-		const button = info?.button ?? 0;
-		onSearchEngineClick(selectedEngine, getOpenResultBehaviourForContextMenu(button), info.selectionText ?? info.linkText, info.pageUrl, info.linkText);
+		// Chrome context-menu commands are left-click only and do not expose linkText.
+		onSearchEngineClick(selectedEngine, getOpenResultBehaviourForContextMenu(0), info.selectionText, info.pageUrl, null);
 	}
 
 	function getOpenResultBehaviourForContextMenu(button: number)
@@ -966,13 +956,13 @@ namespace SSS
 	function setup_Commands()
 	{
 		// clear any old registrations
-		if (browser.commands.onCommand.hasListener(onCommand)) {
-			browser.commands.onCommand.removeListener(onCommand);
+		if (chrome.commands.onCommand.hasListener(onCommand)) {
+			chrome.commands.onCommand.removeListener(onCommand);
 		}
 
 		// register keyboard shortcuts
 		if (sss.settings.popupOpenBehaviour !== PopupOpenBehaviour.Off) {
-			browser.commands.onCommand.addListener(onCommand);
+			chrome.commands.onCommand.addListener(onCommand);
 		}
 	}
 
@@ -988,7 +978,7 @@ namespace SSS
 	function onOpenPopupCommand()
 	{
 		if (DEBUG) { log("open-popup"); }
-		getActiveTab().then(tab => browser.tabs.sendMessage(tab.id, { type: "showPopup" }));
+		getActiveTab().then(tab => chrome.tabs.sendMessage(tab.id, { type: "showPopup" }));
 	}
 
 	function onToggleAutoPopupCommand()
@@ -997,9 +987,9 @@ namespace SSS
 
 		// toggles value between Auto and Keyboard
 		if (sss.settings.popupOpenBehaviour === PopupOpenBehaviour.Auto) {
-			browser.storage.local.set({ popupOpenBehaviour: PopupOpenBehaviour.Keyboard });
+			chrome.storage.local.set({ popupOpenBehaviour: PopupOpenBehaviour.Keyboard });
 		} else if (sss.settings.popupOpenBehaviour === PopupOpenBehaviour.Keyboard) {
-			browser.storage.local.set({ popupOpenBehaviour: PopupOpenBehaviour.Auto });
+			chrome.storage.local.set({ popupOpenBehaviour: PopupOpenBehaviour.Auto });
 		}
 	}
 
@@ -1009,121 +999,10 @@ namespace SSS
 
 	function setup_Popup()
 	{
-		// remove eventual previous registrations
-		browser.webNavigation.onDOMContentLoaded.removeListener(onDOMContentLoaded);
-
-		// If the user has set the option to always use the engine shortcuts, we inject the script
-		// even if the opening behaviour of the popup is set to Off (never).
-		if (sss.settings.popupOpenBehaviour !== PopupOpenBehaviour.Off || sss.settings.useEngineShortcutWithoutPopup) {
-			// register page load event and try to add the content script to all open pages
-			browser.webNavigation.onDOMContentLoaded.addListener(onDOMContentLoaded);
-			browser.tabs.query({}).then(installOnOpenTabs, getErrorHandler("Error querying tabs."));
-		}
-
-		if (browser.webRequest)
-		{
-			registerCSPModification();
-		}
-	}
-
-	function onDOMContentLoaded(details)
-	{
-		injectContentScript(details.tabId, details.frameId, false);
-	}
-
-	function installOnOpenTabs(tabs: browser.tabs.Tab[])
-	{
-		if (DEBUG) { log("installOnOpenTabs"); }
-
-		for (const tab of tabs) {
-			injectContentScriptIfNeeded(tab.id, undefined, true);	// inject on all frames if possible
-		}
-	}
-
-	function injectContentScriptIfNeeded(tabId: number, frameId?: number, allFrames: boolean = false)
-	{
-		// try sending message to see if content script exists. if it errors then inject it
-		browser.tabs.sendMessage(tabId, { type: "isAlive" }).then(
-			msg => {
-				if (msg === undefined) {
-					injectContentScript(tabId, frameId, allFrames);
-				}
-			},
-			() => injectContentScript(tabId, frameId, allFrames)
-		);
-	}
-
-	function injectContentScript(tabId: number, frameId?: number, allFrames: boolean = false)
-	{
-		if (DEBUG) { log("injectContentScript " + tabId + " frameId: " + frameId + " allFrames: " + allFrames); }
-
-		const errorHandler = getErrorHandler(`Error injecting page content script in tab ${tabId}.`);
-
-		const executeScriptOptions: browser.extensionTypes.InjectDetails = {
-			runAt: "document_start",
-			frameId: frameId,
-			allFrames: allFrames,
-			file: undefined,
-			code: undefined,
-		};
-
-		// Save function for either calling it as a callback to another function (1), or as its own call (2).
-		const injectPageScript = () => {
-			executeScriptOptions.file = "/content-scripts/selectionchange.js";
-			browser.tabs.executeScript(tabId, executeScriptOptions).then(() => {
-				executeScriptOptions.file = "/content-scripts/page-script.js";
-				browser.tabs.executeScript(tabId, executeScriptOptions)
-					.then(() => browser.tabs.get(tabId).then(activateTab), errorHandler)
-			}, errorHandler);
-		};
-
-		// The DEBUG variable is also passed if true, so we only have to declare debug mode once: at the top of this background script.
-		if (DEBUG) {
-			executeScriptOptions.code = "var DEBUG_STATE = " + DEBUG + ";",
-			browser.tabs.executeScript(tabId, executeScriptOptions).then(injectPageScript, errorHandler);	// (1) callback to another function
-			executeScriptOptions.code = undefined;	// remove "code" field from object
-		} else {
-			injectPageScript();	// (2) own call
-		}
-	}
-
-	/* ------------------------------------ */
-	/* ------- HEADER MODIFICATION -------- */
-	/* ------------------------------------ */
-
-	// Some pages have a restrictive CSP that blocks things, but extensions can modify the CSP to allow their own modifications
-	// (as long as they have the needed permissions). In particular, SSS needs to use inline style blocks.
-	function registerCSPModification()
-	{
-		browser.webRequest.onHeadersReceived.removeListener(modifyCSPRequest);
-
-		if (DEBUG) { log("registering with onHeadersReceived"); }
-
-		browser.webRequest.onHeadersReceived.addListener(
-			modifyCSPRequest,
-			{ urls : [ "http://*/*", "https://*/*" ], types: [ "main_frame" ] },
-			[ "blocking", "responseHeaders" ]
-		);
-	}
-
-	function modifyCSPRequest(details)
-	{
-		for (const responseHeader of details.responseHeaders)
-		{
-			const headerName = responseHeader.name.toLowerCase();
-			if (headerName !== "content-security-policy" && headerName !== "x-webkit-csp") continue;
-
-			const CSP_SOURCE = "style-src ";	// the trailing space is important, otherwise we also match things like "style-src-attr" or "style-src-elem"
-
-			if (responseHeader.value.includes(CSP_SOURCE))
-			{
-				if (DEBUG) { log("CSP is: " + responseHeader.value); }
-				responseHeader.value = responseHeader.value.replace(CSP_SOURCE, CSP_SOURCE + "'unsafe-inline' ");
-				if (DEBUG) { log("modified CSP to include style-src 'unsafe-inline': " + responseHeader.value); }
-			}
-		}
-
-		return details;
+		// Content scripts are declared statically in manifest.json for MV3. Each
+		// script requests activation when it starts; settings changes are pushed by
+		// updateSettingsOnAllTabs(). Content-script styles do not require weakening
+		// the host page's CSP, so the old blocking webRequest hook is unnecessary.
 	}
 
 	/* ------------------------------------ */
@@ -1227,7 +1106,7 @@ namespace SSS
 				}
 
 				const query = getSearchQuery(engine_Custom, searchText, new URL(href));
-				const tab: browser.tabs.Tab = await createTabForSearch(openingBehaviour, tabIndexOffset, query);
+				const tab: chrome.tabs.Tab = await createTabForSearch(openingBehaviour, tabIndexOffset, query);
 
 				if (engine_Custom.discardOnOpen) {
 					// We wanted to have a way to know that the browser has already changed the URL by this point
@@ -1235,7 +1114,7 @@ namespace SSS
 					// in order to close the tab, but sadly that's unknown at the moment.
 					// Instead we (UGLYYYY) wait 50ms for the search to hopefully be started.
 					await new Promise(finish => setTimeout(finish, 50));
-					await browser.tabs.remove(tab.id);
+					await chrome.tabs.remove(tab.id);
 
 					// Return to normal opening behaviour after discard.
 					openingBehaviour = openingBehaviourBeforeDiscard;
@@ -1251,22 +1130,19 @@ namespace SSS
 				const engine_BrowserSearchApi = engine as SearchEngine_BrowserSearchApi;
 
 				// NOTE: Ideally, above we'd like to create a new empty tab with createTabForSearch, and then always
-				// call browser.search.search() on that tab.id, which would magically support every opening behaviour.
+				// call chrome.search.search() on that tab.id, which would magically support every opening behaviour.
 				// However, life is sad and another addon can modify the "new tab" page. That would cause a race
 				// condition with this code when it tries to load the search URL. Only one or the other would work.
 
 				// Because of that, we comment this out and resort to the old way that only supports ThisTab or NewTab.
-				// const tab: browser.tabs.Tab = await getTabForSearch(openingBehaviour, tabIndexOffset);
+				// const tab: chrome.tabs.Tab = await getTabForSearch(openingBehaviour, tabIndexOffset);
 
-				const tab: browser.tabs.Tab = await getActiveTab();
+				const tab: chrome.tabs.Tab = await getActiveTab();
 
-				await browser.search.search({
-					engine: engine_BrowserSearchApi.name,
-					query: cleanSearchText(searchText),
-					// we want all open behaviours that are not "ThisTab" to open in another tab
-					tabId: openingBehaviour === OpenResultBehaviour.ThisTab ? tab.id : undefined,
-					// tabId: tab.id	// could be simply this if it wasn't for the big explanation above
-				});
+				const queryInfo: chrome.search.QueryInfo = openingBehaviour === OpenResultBehaviour.ThisTab
+					? { text: cleanSearchText(searchText), tabId: tab.id }
+					: { text: cleanSearchText(searchText), disposition: "NEW_TAB" };
+				await chrome.search.query(queryInfo);
 			}
 
 			// if we've just opened a background tab next to the active one, make sure subsequent tabs open further away each time
@@ -1285,12 +1161,12 @@ namespace SSS
 
 	function copyToClipboardAsHtml()
 	{
-		getActiveTab().then(tab => browser.tabs.sendMessage(tab.id, { type: "copyToClipboardAsHtml" }));
+		getActiveTab().then(tab => chrome.tabs.sendMessage(tab.id, { type: "copyToClipboardAsHtml" }));
 	}
 
 	function copyToClipboardAsPlainText()
 	{
-		getActiveTab().then(tab => browser.tabs.sendMessage(tab.id, { type: "copyToClipboardAsPlainText" }));
+		getActiveTab().then(tab => chrome.tabs.sendMessage(tab.id, { type: "copyToClipboardAsPlainText" }));
 	}
 
 	function getOpenAsLinkSearchUrl(link: string): string
@@ -1344,9 +1220,9 @@ namespace SSS
 	}
 
 	// Creates/reuses a tab based on the opening behaviour, to be used for a search (the search is done automatically if searchUrl is not null).
-	async function createTabForSearch(openingBehaviour: OpenResultBehaviour, tabIndexOffset: number, searchUrl: string = null): Promise<browser.tabs.Tab>
+	async function createTabForSearch(openingBehaviour: OpenResultBehaviour, tabIndexOffset: number, searchUrl: string = null): Promise<chrome.tabs.Tab>
 	{
-		const tab: browser.tabs.Tab = await getActiveTab();
+		const tab: chrome.tabs.Tab = await getActiveTab();
 
 		const lastTabIndex: number = 9999;	// "guarantees" tab opens as last for some behaviours
 		const options: object = {};
@@ -1366,39 +1242,39 @@ namespace SSS
 		{
 			case OpenResultBehaviour.ThisTab:
 				if (searchUrl !== null) {
-					await browser.tabs.update(tab.id, options);
+					await chrome.tabs.update(tab.id, options);
 				}
 				return tab;	// doesn't actually create a tab, just returns the active one
 
 			case OpenResultBehaviour.NewTab:
 				options["index"] = lastTabIndex + 1;
-				return browser.tabs.create(options);
+				return chrome.tabs.create(options);
 
 			case OpenResultBehaviour.NewBgTab:
 				options["index"] = lastTabIndex + 1;
 				options["active"] = false;
-				return browser.tabs.create(options);
+				return chrome.tabs.create(options);
 
 			case OpenResultBehaviour.NewTabNextToThis:
 				options["index"] = tab.index + 1 + tabIndexOffset;
-				return browser.tabs.create(options);
+				return chrome.tabs.create(options);
 
 			case OpenResultBehaviour.NewBgTabNextToThis:
 				options["index"] = tab.index + 1 + tabIndexOffset;
 				options["active"] = false;
-				return browser.tabs.create(options);
+				return chrome.tabs.create(options);
 
 			case OpenResultBehaviour.NewWindow:
-				return browser.windows.create(options).then(window => window.tabs[0]);
+				return chrome.windows.create(options).then(window => window.tabs[0]);
 
 			case OpenResultBehaviour.NewBgWindow:
 				// options["focused"] = false;	// fails because it's unsupported by Firefox
-				return browser.windows.create(options).then(window => window.tabs[0]);
+				return chrome.windows.create(options).then(window => window.tabs[0]);
 		}
 	}
 
-	function getActiveTab(): Promise<browser.tabs.Tab>
+	function getActiveTab(): Promise<chrome.tabs.Tab>
 	{
-		return browser.tabs.query({currentWindow: true, active: true}).then(tabs => tabs[0]);
+		return chrome.tabs.query({currentWindow: true, active: true}).then(tabs => tabs[0]);
 	}
 }

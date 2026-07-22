@@ -127,9 +127,9 @@ namespace SSS_Settings
 
 	document.addEventListener("DOMContentLoaded", onDOMContentLoaded);
 
-	// ask all needed information from the background script (can't use browser.extension.getBackgroundPage() in private mode, so it has to be this way)
+	// ask all needed information from the background script (can't use chrome.extension.getBackgroundPage() in private mode, so it has to be this way)
 
-	browser.runtime.sendMessage({ type: "getDataForSettingsPage" }).then(
+	chrome.runtime.sendMessage({ type: "getDataForSettingsPage" }).then(
 		data => {
 			DEBUG = data.DEBUG;
 			browserVersion = data.browserVersion;
@@ -143,8 +143,8 @@ namespace SSS_Settings
 			}
 
 			// Load settings. The last of either onSettingsAcquired and onPageLoaded will update the UI with the loaded settings.
-			browser.storage.local.get().then(onSettingsAcquired, getErrorHandler("Error getting settings in settings page."));
-			browser.storage.onChanged.addListener(onSettingsChanged);
+			chrome.storage.local.get().then(onSettingsAcquired, getErrorHandler("Error getting settings in settings page."));
+			chrome.storage.onChanged.addListener(onSettingsChanged);
 
 			// if DOM already loaded by now, setup page
 			if (hasDOMContentLoaded) {
@@ -167,14 +167,20 @@ namespace SSS_Settings
 
 	async function createDefaultEngine(engine: SSS.SearchEngine): Promise<SSS.SearchEngine>
 	{
-		engine.uniqueId = await browser.runtime.sendMessage({ type: "generateUniqueEngineId" });
+		engine.uniqueId = await chrome.runtime.sendMessage({ type: "generateUniqueEngineId" });
 		engine.isEnabled = true;
 		engine.isEnabledInContextMenu = true;
 		return engine;
 	}
 
-	// adds to SSS all engines from the browser (these are special and contain very little information)
-	async function addBrowserEnginesToEnginesList(browserSearchEngines: browser.search.SearchEngine[])
+	interface BrowserSearchEngine {
+		name: string;
+		favIconUrl?: string;
+	}
+
+	// Kept for importing backups created by the Firefox version. Chrome does
+	// not expose an API for enumerating the user's configured search engines.
+	async function addBrowserEnginesToEnginesList(browserSearchEngines: BrowserSearchEngine[])
 	{
 		// "hash set" of search URLs (will help avoiding duplicates of previously imported browser engines)
 		const names = {};
@@ -575,23 +581,15 @@ namespace SSS_Settings
 			}
 		};
 
-		page.importBrowserEnginesButton.onclick = async _ =>
+		page.importBrowserEnginesButton.onclick = _ =>
 		{
-			if (confirm("Really import your browser's search engines?"))
-			{
-				const browserSearchEngines: browser.search.SearchEngine[] = await browser.search.get();
-				if (DEBUG) { log(browserSearchEngines); }
-
-				await addBrowserEnginesToEnginesList(browserSearchEngines);
-				updateUIWithSettings();
-				saveSettings({ searchEngines: settings.searchEngines });
-			}
+			alert("Chrome does not provide extensions with a list of configured search engines. Add a custom search engine instead.");
 		}
 
 		page.exportSettingsToFileButton.onclick = _ =>
 		{
 			// to save as a file we need the "downloads permission"
-			browser.permissions.request({ permissions: ["downloads"] }).then(wasPermissionGranted =>
+			chrome.permissions.request({ permissions: ["downloads"] }).then(wasPermissionGranted =>
 			{
 				if (!wasPermissionGranted) {
 					alert("Sorry, you cannot export your file without the \"Downloads\" permission! I know it's weird, but it's really needed. :(");
@@ -603,7 +601,7 @@ namespace SSS_Settings
 				// save with current date and time
 				const filename = "SSS settings backup (" + new Date(Date.now()).toJSON().replace(/:/g, ".") + ").json";
 
-				browser.downloads.download({
+				chrome.downloads.download({
 					"saveAs": true,
 					"url": URL.createObjectURL(blob),
 					"filename": filename,
@@ -625,7 +623,7 @@ namespace SSS_Settings
 		// this should use "onfocus" instead of "onclick" but permissions.request can only be called on user input... (it still works with onfocus, but prints errors)
 		page.websiteBlocklist.onclick = _ => {
 			// to use the website blocklist we need the tabs permission
-			browser.permissions.request({ permissions: ["tabs"] }).then(wasPermissionGranted =>
+			chrome.permissions.request({ permissions: ["tabs"] }).then(wasPermissionGranted =>
 			{
 				if (!wasPermissionGranted) {
 					page.websiteBlocklist.blur();	// remove focus
@@ -672,7 +670,7 @@ namespace SSS_Settings
 
 		// show platform-specific sections (some info on the page is related to a specific OS and should only appear in that OS)
 
-		browser.runtime.getPlatformInfo().then(info => {
+		chrome.runtime.getPlatformInfo().then(info => {
 			let platformSpecificElements;
 
 			switch (info.os)
@@ -702,7 +700,7 @@ namespace SSS_Settings
 		window.onfocus = _ => {
 			// if settings changed while page was not focused, reload settings and UI
 			if (isPendingSettings) {
-				browser.storage.local.get().then(onSettingsAcquired, getErrorHandler("Error getting settings in settings page."));
+				chrome.storage.local.get().then(onSettingsAcquired, getErrorHandler("Error getting settings in settings page."));
 			}
 			isFocused = true;
 		};
@@ -771,8 +769,8 @@ namespace SSS_Settings
 				chunks["p"+chunkIndex] = settingsStr.substring(i, i + 1000);
 			}
 
-			browser.storage.sync.clear();
-			browser.storage.sync.set(chunks).then(
+			chrome.storage.sync.clear();
+			chrome.storage.sync.set(chunks).then(
 				() => { if (DEBUG) { log("All settings and engines were saved in Sync!"); } },
 				() => { if (DEBUG) { log("Uploading to Sync failed! Is your network working? Are you under the 100KB size limit?"); } }
 			);
@@ -808,7 +806,7 @@ namespace SSS_Settings
 		{
 			if (confirm("Really load all settings from Firefox Sync?"))
 			{
-				browser.storage.sync.get().then(chunks => {
+				chrome.storage.sync.get().then(chunks => {
 					if (DEBUG) { log(chunks); }
 
 					// join all chunks of data we uploaded to sync in a list
@@ -1196,7 +1194,7 @@ namespace SSS_Settings
 			{
 				const engineDescription = document.createElement("div");
 				engineDescription.className = "engine-uneditable engine-description-small";
-				engineDescription.textContent = "[Browser] Engine imported from the browser.";
+				engineDescription.textContent = "[Browser] Engine imported from the chrome.";
 				engineRow.appendChild(engineDescription);
 			}
 			else if (engine.type === SSS.SearchEngineType.Group)
@@ -1250,14 +1248,14 @@ namespace SSS_Settings
 		if (engine.type === SSS.SearchEngineType.SSS) {
 			// special SSS icons have data that never changes, so just get it from constants
 			const sssIcon = sssIcons[(engine as SSS.SearchEngine_SSS).id];
-			iconImgSource = browser.extension.getURL(sssIcon.iconPath);
+			iconImgSource = chrome.runtime.getURL(sssIcon.iconPath);
 		} else {
 			iconImgSource = (engine as SSS.SearchEngine_NonSSS).iconUrl;
 		}
 
 		// Sets the icon for a search engine.
 		// "data:" links are data, URLs are cached as data too.
-		if (iconImgSource.startsWith("data:") || iconImgSource.startsWith("moz-extension:")) {
+		if (iconImgSource.startsWith("data:") || iconImgSource.startsWith("chrome-extension:")) {
 			iconImg.src = iconImgSource;
 		} else if (settings.searchEnginesCache[iconImgSource] === undefined && iconImgSource) {
 			iconImg.src = iconImgSource;
@@ -1713,7 +1711,7 @@ namespace SSS_Settings
 		importedSettings.searchEnginesCache = {};
 
 		// run compatibility updates in case this is a backup made in an old version of SSS
-		browser.runtime.sendMessage({ type: "runBackwardsCompatibilityUpdates", settings: importedSettings }).then(
+		chrome.runtime.sendMessage({ type: "runBackwardsCompatibilityUpdates", settings: importedSettings }).then(
 			(_settings) => {
 				settings = _settings;
 
@@ -1765,7 +1763,7 @@ namespace SSS_Settings
 	// just a wrapper for saving the settings to storage and logging info
 	function saveSettings(obj)
 	{
-		browser.storage.local.set(obj);
+		chrome.storage.local.set(obj);
 		if (DEBUG) { log("saved!", settings); }
 	}
 

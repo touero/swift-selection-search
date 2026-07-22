@@ -2593,7 +2593,7 @@ function simpleEnd(buf) {
   return buf && buf.length ? this.write(buf) : '';
 }
 },{"safe-buffer":6}],8:[function(require,module,exports){
-window.iconv = require('iconv-lite');
+globalThis.iconv = require('iconv-lite');
 
 },{"iconv-lite":28}],9:[function(require,module,exports){
 "use strict";
