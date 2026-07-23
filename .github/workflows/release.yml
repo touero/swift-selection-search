@@ -1,4 +1,4 @@
-name: Release Chrome extension
+name: Create GitHub release
 
 on:
   push:
@@ -60,51 +60,3 @@ jobs:
             --verify-tag \
             --generate-notes \
             --title "Swift Selection Search $GITHUB_REF_NAME"
-
-      - name: Get Chrome Web Store access token
-        id: chrome-token
-        shell: bash
-        env:
-          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
-        run: |
-          RESPONSE="$(curl --fail-with-body --silent --show-error \
-            -X POST "https://oauth2.googleapis.com/token" \
-            --data-urlencode "client_id=$CLIENT_ID" \
-            --data-urlencode "client_secret=$CLIENT_SECRET" \
-            --data-urlencode "refresh_token=$REFRESH_TOKEN" \
-            --data-urlencode "grant_type=refresh_token")"
-          ACCESS_TOKEN="$(jq -er .access_token <<<"$RESPONSE")"
-          echo "access_token=$ACCESS_TOKEN" >> "$GITHUB_OUTPUT"
-          echo "::add-mask::$ACCESS_TOKEN"
-
-      - name: Upload package to Chrome Web Store
-        shell: bash
-        env:
-          ACCESS_TOKEN: ${{ steps.chrome-token.outputs.access_token }}
-          PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-        run: |
-          RESPONSE="$(curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -X POST \
-            -T "$ARCHIVE" \
-            "https://chromewebstore.googleapis.com/upload/v2/publishers/$PUBLISHER_ID/items/$EXTENSION_ID:upload")"
-          echo "$RESPONSE" | jq .
-          jq -e 'has("error") | not' <<<"$RESPONSE" >/dev/null
-
-      - name: Submit Chrome Web Store release
-        shell: bash
-        env:
-          ACCESS_TOKEN: ${{ steps.chrome-token.outputs.access_token }}
-          PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
-          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
-        run: |
-          RESPONSE="$(curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $ACCESS_TOKEN" \
-            -H "Content-Length: 0" \
-            -X POST \
-            "https://chromewebstore.googleapis.com/v2/publishers/$PUBLISHER_ID/items/$EXTENSION_ID:publish")"
-          echo "$RESPONSE" | jq .
-          jq -e 'has("error") | not' <<<"$RESPONSE" >/dev/null
