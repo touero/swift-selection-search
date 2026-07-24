@@ -781,6 +781,7 @@ namespace PopupCreator
 
 				.sss-engines {
 					${this.generateStylesheet_TextAlign(settings)}
+					${settings.useSingleRow ? "white-space: nowrap !important;" : ""}
 				}
 
 				.sss-input-field {
