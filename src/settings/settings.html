@@ -1254,7 +1254,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 					<span id="storage-size" class="warn-when-over-storage-limit"></span>
 				</div>
 				<div class="setting-description">
-					This is an estimate size of your SSS engines and options. <span class="warn-when-over-storage-limit">Engines with "data:image" icons tend to occupy a lot of space</span>. WARNING: Actual size will very likely be above or below the displayed value.
+					This is an estimate of the Chrome Sync storage used by your SSS engines and options. <span class="warn-when-over-storage-limit">Engines with "data:image" icons tend to occupy a lot of space.</span> The actual size may differ slightly.
 				</div>
 				<div class="setting-reset"></div>
 			</div>
@@ -1265,7 +1265,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 					<input type="button" name="saveSettingsToSyncButton" value="Save to Sync" class="warn-when-over-storage-limit">
 				</div>
 				<div class="setting-description">
-					Saves all SSS options and engines in Firefox Sync. This does not force upload, so you may have to wait for Firefox to sync or force the sync yourself from Firefox's menu. <span class="warn-when-over-storage-limit">Beware that storage size should be below 100KB for this to work. If above the limit, start by deleting any "data:image" URLs in your engines, or any other extremely long URLs.</span> Estimate size is not exact, so it may still work if above the limit, or fail if below it.
+					Saves all SSS options and engines to Chrome Sync. Chrome will sync this data between signed-in Chrome profiles when extension syncing is enabled. <span class="warn-when-over-storage-limit">The total must stay below Chrome's 100KB sync-storage limit. If it is too large, remove "data:image" icons or other extremely long URLs from your engines.</span>
 				</div>
 				<div class="setting-reset"></div>
 			</div>
@@ -1276,7 +1276,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 					<input type="button" name="loadSettingsFromSyncButton" value="Load from Sync">
 				</div>
 				<div class="setting-description">
-					Downloads previously saved SSS options and engines from Firefox Sync. This will override all existing options and engines!
+					Loads previously saved SSS options and engines from Chrome Sync. This will overwrite all existing options and engines!
 				</div>
 				<div class="setting-reset"></div>
 			</div>

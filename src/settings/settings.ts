@@ -755,26 +755,24 @@ namespace SSS_Settings
 			updateUIWithSettings();
 		};
 
-		// saves settings to Firefox Sync
-		page.saveSettingsToSyncButton.onclick = _ => {
+		// Save settings to Chrome Sync.
+		page.saveSettingsToSyncButton.onclick = async _ => {
 			if (DEBUG) { log("saving!"); }
 
-			// remove useless stuff that doesn't need to be stored
-			var settingsStr = runActionOnDietSettings(settings, (settings: SSS.Settings) => JSON.stringify(settings));
+			// Remove data that does not need to be stored.
+			const settingsStr = runActionOnDietSettings(settings, (settings: SSS.Settings) => JSON.stringify(settings));
 
-			// divide into different fields so as not to trigger Firefox's "Maximum bytes per object exceeded ([number of bytes] > 16384 Bytes.)"
-			const chunks = {};
-			let chunkIndex = 0;
-			for (let i = 0, length = settingsStr.length; i < length; i += 1000, chunkIndex++) {
-				chunks["p"+chunkIndex] = settingsStr.substring(i, i + 1000);
+			// Keep each item comfortably below Chrome Sync's per-item quota.
+			const chunks = createSyncChunks(settingsStr);
+
+			try {
+				// Wait for stale chunks to be removed before writing the new backup.
+				await chrome.storage.sync.clear();
+				await chrome.storage.sync.set(chunks);
+				if (DEBUG) { log("All settings and engines were saved in Chrome Sync!", chunks); }
+			} catch (error) {
+				if (DEBUG) { log("Uploading to Chrome Sync failed. Is sync enabled, and is the backup under the 100KB limit?", error); }
 			}
-
-			chrome.storage.sync.clear();
-			chrome.storage.sync.set(chunks).then(
-				() => { if (DEBUG) { log("All settings and engines were saved in Sync!"); } },
-				() => { if (DEBUG) { log("Uploading to Sync failed! Is your network working? Are you under the 100KB size limit?"); } }
-			);
-			if (DEBUG) { log("saved in sync!", chunks); }
 		};
 
 		// buttons with confirmation
@@ -804,7 +802,7 @@ namespace SSS_Settings
 
 		page.loadSettingsFromSyncButton.onclick = _ =>
 		{
-			if (confirm("Really load all settings from Firefox Sync?"))
+			if (confirm("Really load all settings from Chrome Sync?"))
 			{
 				chrome.storage.sync.get().then(chunks => {
 					if (DEBUG) { log(chunks); }
@@ -897,7 +895,7 @@ namespace SSS_Settings
 			loadSettingValueIntoElement(item);
 		}
 
-		// calculate storage size (helpful for Firefox Sync)
+		// Calculate estimated Chrome Sync storage usage.
 
 		calculateAndShowSettingsSize();
 
@@ -1072,10 +1070,26 @@ namespace SSS_Settings
 		}
 	}
 
-	// estimates size of settings in bytes and shows warning messages if this is a problem when using Firefox Sync
+	function createSyncChunks(settingsStr: string): { [key: string]: string }
+	{
+		const chunks: { [key: string]: string } = {};
+		let chunkIndex = 0;
+		for (let i = 0; i < settingsStr.length; i += 1000, chunkIndex++) {
+			chunks["p" + chunkIndex] = settingsStr.substring(i, i + 1000);
+		}
+		return chunks;
+	}
+
+	// Estimate Chrome Sync usage, including chunk keys and JSON string escaping.
 	function calculateAndShowSettingsSize()
 	{
-		const storageSize = runActionOnDietSettings(settings, settings => JSON.stringify(settings).length * 2);	// times 2 because each char is 2 bytes
+		const storageSize = runActionOnDietSettings(settings, settings => {
+			const chunks = createSyncChunks(JSON.stringify(settings));
+			return Object.keys(chunks).reduce(
+				(total, key) => total + new Blob([key, JSON.stringify(chunks[key])]).size,
+				0
+			);
+		});
 		const maxRecommendedStorageSize = 100 * 1024;
 
 		for (const elem of document.querySelectorAll(".warn-when-over-storage-limit")) {
