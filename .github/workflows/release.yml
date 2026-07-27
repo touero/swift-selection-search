@@ -1,20 +1,43 @@
-name: Create GitHub release
+name: Release and publish Chrome extension
 
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release/publish, for example v1.0.1"
+        required: true
+        type: string
+      publish_target:
+        description: "Chrome Web Store publish target"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - trustedTesters
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref_name || inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
+    env:
+      PUBLISH_TARGET: ${{ inputs.publish_target || 'default' }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -25,13 +48,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve release tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            RELEASE_TAG="${{ inputs.tag }}"
+          else
+            RELEASE_TAG="$GITHUB_REF_NAME"
+          fi
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must look like v<manifest-version>, got: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+
       - name: Validate tag and manifest version
         shell: bash
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
           MANIFEST_VERSION="$(jq -r .version src/manifest.json)"
-          if [[ "$TAG_VERSION" != "$MANIFEST_VERSION" ]]; then
-            echo "Tag version $TAG_VERSION does not match manifest version $MANIFEST_VERSION." >&2
+          if [[ "$RELEASE_VERSION" != "$MANIFEST_VERSION" ]]; then
+            echo "Tag version $RELEASE_VERSION does not match manifest version $MANIFEST_VERSION." >&2
             exit 1
           fi
 
@@ -43,7 +82,7 @@ jobs:
       - name: Package extension
         shell: bash
         run: |
-          ARCHIVE="swift-selection-search-chrome-${GITHUB_REF_NAME#v}.zip"
+          ARCHIVE="swift-selection-search-chrome-${RELEASE_VERSION}.zip"
           (
             cd src
             zip -r "../$ARCHIVE" . \
@@ -56,7 +95,75 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$ARCHIVE" \
-            --verify-tag \
-            --generate-notes \
-            --title "Swift Selection Search $GITHUB_REF_NAME"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$ARCHIVE" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$ARCHIVE" \
+              --verify-tag \
+              --generate-notes \
+              --title "Swift Selection Search $RELEASE_TAG"
+          fi
+
+      - name: Get Chrome Web Store access token
+        id: chrome_token
+        shell: bash
+        env:
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: |
+          response="$(curl -sS --fail-with-body -X POST "https://oauth2.googleapis.com/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data-urlencode "client_id=$CHROME_CLIENT_ID" \
+            --data-urlencode "client_secret=$CHROME_CLIENT_SECRET" \
+            --data-urlencode "refresh_token=$CHROME_REFRESH_TOKEN" \
+            --data-urlencode "grant_type=refresh_token")"
+
+          access_token="$(jq -r '.access_token // empty' <<< "$response")"
+          if [[ -z "$access_token" ]]; then
+            echo "Could not obtain Chrome Web Store access token." >&2
+            echo "$response" >&2
+            exit 1
+          fi
+
+          echo "::add-mask::$access_token"
+          echo "access_token=$access_token" >> "$GITHUB_OUTPUT"
+
+      - name: Upload package to Chrome Web Store
+        shell: bash
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          ACCESS_TOKEN: ${{ steps.chrome_token.outputs.access_token }}
+        run: |
+          response="$(curl -sS --fail-with-body -X PUT \
+            "https://www.googleapis.com/upload/chromewebstore/v1.1/items/$CHROME_EXTENSION_ID" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@$ARCHIVE")"
+
+          echo "$response" | jq .
+          upload_state="$(jq -r '.uploadState // empty' <<< "$response")"
+          if [[ "$upload_state" != "SUCCESS" ]]; then
+            echo "Chrome Web Store upload failed with state: $upload_state" >&2
+            exit 1
+          fi
+
+      - name: Publish on Chrome Web Store
+        shell: bash
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          ACCESS_TOKEN: ${{ steps.chrome_token.outputs.access_token }}
+        run: |
+          response="$(curl -sS --fail-with-body -X POST \
+            "https://www.googleapis.com/chromewebstore/v1.1/items/$CHROME_EXTENSION_ID/publish?publishTarget=$PUBLISH_TARGET" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -H "x-goog-api-version: 2" \
+            -H "Content-Length: 0")"
+
+          echo "$response" | jq .
+          status="$(jq -r '.status[]? // empty' <<< "$response" | paste -sd ',' -)"
+          if [[ "$status" != *"OK"* ]]; then
+            echo "Chrome Web Store publish did not return OK. Status: $status" >&2
+            exit 1
+          fi

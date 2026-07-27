@@ -1,6 +1,6 @@
 {
   "name": "swift-selection-search",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Swift Selection Search adapted for Chrome Manifest V3.",
   "main": "src/swift-selection-search.js",
   "homepage": "https://github.com/CanisLupus/swift-selection-search",
