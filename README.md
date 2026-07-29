@@ -11,6 +11,17 @@ The upstream project is a Firefox extension. This fork updates its background pr
 - Keyboard shortcuts
 - Import and export settings
 
+<a href="https://chromewebstore.google.com/detail/swift-selection-search/imminkkhgldibmkjekahkgbgkkmglhdp">
+  <img
+    src="https://cdn.simpleicons.org/chromewebstore"
+    alt="Chrome Web Store"
+    width="32"
+    valign="middle"
+  >
+  <strong>Install from Chrome Web Store</strong>
+</a>
+
+
 Chrome does not provide all of the APIs available in Firefox. Consequently, this version cannot read or import the browser's built-in search engines, and Chrome context-menu items cannot distinguish between middle- and right-button clicks. Custom search engines are unaffected.
 
 <p align="center">
