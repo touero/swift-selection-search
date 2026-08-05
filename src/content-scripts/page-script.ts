@@ -278,14 +278,25 @@ namespace ContentScript
 
 	function acquireSettings(onSettingsAcquired: () => void)
 	{
-		chrome.runtime.sendMessage(new GetPopupSettingsMessage()).then(
-			popupSettings => {
-				settings = popupSettings.settings;
-				sssIcons = popupSettings.sssIcons;
-				onSettingsAcquired();
-			},
-			getErrorHandler("Error sending getPopupSettings message from content script.")
-		);
+		// Old content-script instances can stay alive for a short time after the
+		// extension is reloaded from chrome://extensions. In that state Chrome may
+		// throw "Extension context invalidated" synchronously when sendMessage is
+		// called. Ignore it; refreshing the page installs the new content script.
+		if (!chrome.runtime?.id) return;
+
+		try {
+			chrome.runtime.sendMessage(new GetPopupSettingsMessage()).then(
+				popupSettings => {
+					if (!popupSettings || !chrome.runtime?.id) return;
+					settings = popupSettings.settings;
+					sssIcons = popupSettings.sssIcons;
+					onSettingsAcquired();
+				},
+				getErrorHandler("Error sending getPopupSettings message from content script.")
+			);
+		} catch (error) {
+			if (chrome.runtime?.id) getErrorHandler("Error sending getPopupSettings message from content script.")?.(error);
+		}
 	}
 
 	function clearPopupShowTimeout()
@@ -955,65 +966,138 @@ namespace PopupCreator
 			const bounds = this.content.getBoundingClientRect();
 			const width = bounds.width;
 			const height = bounds.height;
+			const viewportMargin: number = 5;
+			const avoidMargin: number = 8;
+			const gap: number = 10;
 
-			// position popup
+			type PageRect = { left: number; top: number; right: number; bottom: number; };
+			type Position = { left: number; top: number; };
 
-			let positionLeft: number;
-			let positionTop: number;
+			const toPageRect = (rect: ClientRect | DOMRect): PageRect => ({
+				left: rect.left + window.pageXOffset - avoidMargin,
+				top: rect.top + window.pageYOffset - avoidMargin,
+				right: rect.right + window.pageXOffset + avoidMargin,
+				bottom: rect.bottom + window.pageYOffset + avoidMargin,
+			});
 
-			// decide popup position based on settings
-			if (settings.popupLocation === SSS.PopupLocation.Selection) {
-				let rect;
-				if (selection.isInInputField) {
-					rect = selection.element.getBoundingClientRect();
-				} else {
-					const range = selection.selection.getRangeAt(0); // get the text range
-					rect = range.getBoundingClientRect();
+			const avoidRects: PageRect[] = [];
+			if (selection.isInInputField) {
+				avoidRects.push(toPageRect(selection.element.getBoundingClientRect()));
+			} else {
+				for (let i = 0; i < selection.selection.rangeCount; i++) {
+					const range = selection.selection.getRangeAt(i);
+					const rects = range.getClientRects();
+					for (let j = 0; j < rects.length; j++) {
+						if (rects[j].width > 0 && rects[j].height > 0) avoidRects.push(toPageRect(rects[j]));
+					}
+
+					if (rects.length === 0) {
+						const rect = range.getBoundingClientRect();
+						if (rect.width > 0 && rect.height > 0) avoidRects.push(toPageRect(rect));
+					}
 				}
-				// lower right corner of selected text's "bounds"
-				positionLeft = rect.right + window.pageXOffset;
-				positionTop = rect.bottom + window.pageYOffset;
+			}
+
+			// Also keep a small safe area around the cursor so the popup does not cover it.
+			if (settings.popupLocation === SSS.PopupLocation.Cursor && mousePositionX > 0 && mousePositionY > 0) {
+				avoidRects.push({
+					left: mousePositionX - avoidMargin,
+					top: mousePositionY - avoidMargin,
+					right: mousePositionX + avoidMargin,
+					bottom: mousePositionY + avoidMargin,
+				});
+			}
+
+			const getSelectionBounds = (): PageRect => {
+				let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+				for (const rect of avoidRects) {
+					left = Math.min(left, rect.left + avoidMargin);
+					top = Math.min(top, rect.top + avoidMargin);
+					right = Math.max(right, rect.right - avoidMargin);
+					bottom = Math.max(bottom, rect.bottom - avoidMargin);
+				}
+
+				if (!Number.isFinite(left)) {
+					left = right = window.scrollX + document.documentElement.clientWidth / 2;
+					top = bottom = window.scrollY + document.documentElement.clientHeight / 2;
+				}
+
+				return { left, top, right, bottom };
+			};
+
+			const clampToViewport = (position: Position): Position => {
+				let left = position.left;
+				let top = position.top;
+				const clientWidth = Math.max(document.body.clientWidth, document.documentElement.clientWidth);
+				const clientHeight = Math.max(document.body.clientHeight, document.documentElement.clientHeight);
+
+				left = Math.max(viewportMargin + window.scrollX, Math.min(left, clientWidth + window.scrollX - width - viewportMargin));
+				top = Math.max(viewportMargin + window.scrollY, Math.min(top, clientHeight + window.scrollY - height - viewportMargin));
+				return { left, top };
+			};
+
+			const overlaps = (position: Position, rect: PageRect): boolean => {
+				return position.left < rect.right && position.left + width > rect.left
+					&& position.top < rect.bottom && position.top + height > rect.top;
+			};
+
+			const overlapArea = (position: Position, rect: PageRect): number => {
+				const overlapWidth = Math.max(0, Math.min(position.left + width, rect.right) - Math.max(position.left, rect.left));
+				const overlapHeight = Math.max(0, Math.min(position.top + height, rect.bottom) - Math.max(position.top, rect.top));
+				return overlapWidth * overlapHeight;
+			};
+
+			const offset = (position: Position): Position => ({
+				left: position.left + settings.popupOffsetX,
+				top: position.top - settings.popupOffsetY,
+			});
+
+			let candidates: Position[] = [];
+			if (settings.popupLocation === SSS.PopupLocation.Selection) {
+				const rect = getSelectionBounds();
+				const centerX = (rect.left + rect.right) / 2;
+				const centerY = (rect.top + rect.bottom) / 2;
+				candidates = [
+					{ left: centerX - width / 2, top: rect.bottom + gap },
+					{ left: centerX - width / 2, top: rect.top - height - gap },
+					{ left: rect.right + gap, top: centerY - height / 2 },
+					{ left: rect.left - width - gap, top: centerY - height / 2 },
+				];
 			}
 			else if (settings.popupLocation === SSS.PopupLocation.Cursor) {
-				// right above the mouse position
-				positionLeft = mousePositionX;
-				positionTop = mousePositionY - height - 10;	// 10 is forced padding to avoid popup being too close to cursor
+				candidates = [
+					{ left: mousePositionX - width / 2, top: mousePositionY - height - gap },
+					{ left: mousePositionX - width / 2, top: mousePositionY + gap },
+					{ left: mousePositionX + gap, top: mousePositionY - height / 2 },
+					{ left: mousePositionX - width - gap, top: mousePositionY - height / 2 },
+				];
 			}
 
-			// center horizontally
-			positionLeft -= width / 2;
-
-			// apply user offsets from settings
-			positionLeft += settings.popupOffsetX;
-			positionTop -= settings.popupOffsetY;	// invert sign because y is 0 at the top
-
-			// don't const popup be outside of the viewport
-
-			const margin: number = 5;
-
-			// left/right checks
-			if (positionLeft < margin + window.scrollX) {
-				positionLeft = margin + window.scrollX;
-			} else {
-				const clientWidth = Math.max(document.body.clientWidth, document.documentElement.clientWidth);
-				if (positionLeft + width + margin > clientWidth + window.scrollX) {
-					positionLeft = clientWidth + window.scrollX - width - margin;
+			let bestPosition = clampToViewport(offset(candidates[0]));
+			let bestOverlapArea = Infinity;
+			for (const candidate of candidates) {
+				const position = clampToViewport(offset(candidate));
+				let totalOverlapArea = 0;
+				let hasOverlap = false;
+				for (const rect of avoidRects) {
+					if (overlaps(position, rect)) hasOverlap = true;
+					totalOverlapArea += overlapArea(position, rect);
 				}
-			}
 
-			// top/bottom checks
-			if (positionTop < margin + window.scrollY) {
-				positionTop = margin + window.scrollY;
-			} else {
-				const clientHeight = Math.max(document.body.clientHeight, document.documentElement.clientHeight);
-				if (positionTop + height + margin > clientHeight + window.scrollY) {
-					positionTop = clientHeight + window.scrollY - height - margin;
+				if (!hasOverlap) {
+					bestPosition = position;
+					break;
+				}
+
+				if (totalOverlapArea < bestOverlapArea) {
+					bestOverlapArea = totalOverlapArea;
+					bestPosition = position;
 				}
 			}
 
 			// finally set the size and position values
-			this.content.style.setProperty("left", positionLeft + "px");
-			this.content.style.setProperty("top", positionTop + "px");
+			this.content.style.setProperty("left", bestPosition.left + "px");
+			this.content.style.setProperty("top", bestPosition.top + "px");
 		}
 
 		playAnimation(settings: SSS.Settings)

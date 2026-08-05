@@ -1,13 +1,17 @@
 {
 	"manifest_version": 3,
 	"name": "Swift Selection Search",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Swiftly access your search engines in a popup panel when you select text in a webpage. Context search menu also included!",
-	"homepage_url": "https://github.com/CanisLupus/swift-selection-search",
+	"homepage_url": "https://github.com/touero/swift-selection-search",
 	"minimum_chrome_version": "102",
 	"icons": {
 		"48": "icons/icon48.png",
 		"96": "icons/icon96.png"
+	},
+	"action": {
+		"default_title": "Swift Selection Search",
+		"default_popup": "popup/popup.html"
 	},
 	"background": {
 		"service_worker": "service-worker.js"

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<style>
+		:root {
+			--sss-popup-background-color: #fff;
+			--sss-popup-highlight-color: #3399ff;
+			--sss-popup-text-color: #222;
+		}
+
+		body {
+			min-width: 180px;
+			margin: 0;
+			padding: 8px;
+			font: 14px Arial, sans-serif;
+			background: var(--sss-popup-background-color);
+			color: var(--sss-popup-text-color);
+		}
+
+		button {
+			display: block;
+			width: 100%;
+			padding: 9px 10px;
+			margin: 0;
+			border: 0;
+			border-radius: 4px;
+			background: transparent;
+			color: inherit;
+			text-align: left;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background: var(--sss-popup-highlight-color);
+		}
+	</style>
+</head>
+<body>
+	<button id="open-settings" type="button">Settings</button>
+	<button id="open-github" type="button">GitHub</button>
+	<script src="popup.js"></script>
+</body>
+</html>
