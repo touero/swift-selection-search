@@ -55,7 +55,6 @@ Chrome extensions cannot run on `chrome://` pages or Chrome Web Store pages due 
 
 See [RELEASING.md](RELEASING.md) for Chrome Web Store and GitHub automated release instructions.
 
-## Upstream project and license
+## License
 
-- Upstream: [CanisLupus/swift-selection-search](https://github.com/CanisLupus/swift-selection-search)
-- License: [MIT](LICENSE)
+[MIT](LICENSE)
