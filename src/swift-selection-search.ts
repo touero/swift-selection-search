@@ -36,7 +36,6 @@ namespace SSS
 		uniqueId: string;
 		type: SearchEngineType;
 		isEnabled: boolean;
-		isEnabledInContextMenu: boolean;
 		shortcut: string;
 	}
 
@@ -134,11 +133,7 @@ namespace SSS
 		useCustomPopupCSS: boolean;
 		customPopupCSS: string;
 
-		enableEnginesInContextMenu: boolean;
 		contextMenuItemBehaviour: OpenResultBehaviour;
-		contextMenuItemRightButtonBehaviour: OpenResultBehaviour;
-		contextMenuItemMiddleButtonBehaviour: OpenResultBehaviour;
-		contextMenuString: string;
 
 		searchEngines: SearchEngine[];
 		searchEnginesCache: { [id: string] : string; };
@@ -239,12 +234,6 @@ namespace SSS
 		Scale = "scale",
 	}
 
-	// not used anymore but needed for retrocompatibility
-	const enum ContextMenuEnginesFilter {
-		All = "all",
-		SameAsPopup = "same-as-popup",
-	}
-
 	const sssIcons: { [id: string] : SSSIconDefinition; } = {
 		copyToClipboard: {
 			name: "Copy to clipboard",
@@ -317,11 +306,7 @@ namespace SSS
 		useCustomPopupCSS: false,
 		customPopupCSS: "",
 
-		enableEnginesInContextMenu: true,
 		contextMenuItemBehaviour: OpenResultBehaviour.NewTabNextToThis,
-		contextMenuItemRightButtonBehaviour: OpenResultBehaviour.NewTabNextToThis,
-		contextMenuItemMiddleButtonBehaviour: OpenResultBehaviour.NewBgTabNextToThis,
-		contextMenuString: "Search for “%s”",
 		// sectionsExpansionState: {},
 
 		searchEngines: [
@@ -633,7 +618,6 @@ namespace SSS
 		if (createSettingIfNonExistent(settings, "iconAlignmentInGrid"))                  shouldSave = true; // 3.25.0
 		if (createSettingIfNonExistent(settings, "popupDelay"))                           shouldSave = true; // 3.29.0
 		if (createSettingIfNonExistent(settings, "maxSelectedCharacters"))                shouldSave = true; // 3.30.0
-		if (createSettingIfNonExistent(settings, "contextMenuString"))                    shouldSave = true; // 3.32.0
 		if (createSettingIfNonExistent(settings, "showSelectionTextField"))               shouldSave = true; // 3.40.0
 		if (createSettingIfNonExistent(settings, "useCustomPopupCSS"))                    shouldSave = true; // 3.40.0
 		if (createSettingIfNonExistent(settings, "customPopupCSS"))                       shouldSave = true; // 3.40.0
@@ -641,8 +625,6 @@ namespace SSS
 		if (createSettingIfNonExistent(settings, "websiteBlocklist"))                     shouldSave = true; // 3.42.0
 		if (createSettingIfNonExistent(settings, "useDarkModeInOptionsPage"))             shouldSave = true; // 3.43.0
 		if (createSettingIfNonExistent(settings, "mouseRightButtonBehaviour"))            shouldSave = true; // 3.43.0
-		if (createSettingIfNonExistent(settings, "contextMenuItemRightButtonBehaviour"))  shouldSave = true; // 3.43.0
-		if (createSettingIfNonExistent(settings, "contextMenuItemMiddleButtonBehaviour")) shouldSave = true; // 3.43.0
 		if (createSettingIfNonExistent(settings, "searchEngineIconsSource"))              shouldSave = true; // 3.44.0
 		if (createSettingIfNonExistent(settings, "shortcutBehaviour"))                    shouldSave = true; // 3.46.0
 		if (createSettingIfNonExistent(settings, "useEngineShortcutWithoutPopup"))        shouldSave = true; // 3.46.0
@@ -664,16 +646,6 @@ namespace SSS
 
 				// just say that BrowserLegacy is a Custom engine from now on, since they are equivalent at this point
 				customEngine.type = SearchEngineType.Custom;	// 3.47.0 (this specific line only)
-				shouldSave = true;
-			}
-		}
-
-		// 3.25.0
-		// add isEnabledInContextMenu to all engines
-		for (const engine of settings.searchEngines)
-		{
-			if (engine.isEnabledInContextMenu === undefined) {
-				engine.isEnabledInContextMenu = engine.type !== SearchEngineType.SSS && (engine.isEnabled || settings.contextMenuEnginesFilter === ContextMenuEnginesFilter.All);
 				shouldSave = true;
 			}
 		}
@@ -866,10 +838,6 @@ namespace SSS
 			engine.isEnabled = true;
 		}
 
-		if (engine.isEnabledInContextMenu === undefined) {
-			engine.isEnabledInContextMenu = engine.isEnabled;
-		}
-
 		return engine;
 	}
 
@@ -877,41 +845,51 @@ namespace SSS
 	/* ----------- CONTEXT MENU ----------- */
 	/* ------------------------------------ */
 
-	async function setup_ContextMenu()
+	// Context menu creation is serialized: chrome.contextMenus.removeAll() is asynchronous,
+	// so overlapping calls would recreate the same ids before the previous removal finished,
+	// causing "Cannot create item with duplicate id" errors.
+	let contextMenuSetupPromise: Promise<void> = Promise.resolve();
+
+	function setup_ContextMenu(): Promise<void>
+	{
+		contextMenuSetupPromise = contextMenuSetupPromise
+			.catch(() => { /* keep the queue alive after a failed run */ })
+			.then(createContextMenu);
+		return contextMenuSetupPromise;
+	}
+
+	async function createContextMenu(): Promise<void>
 	{
 		// Cleanup must finish before IDs are recreated in Chrome.
 		chrome.contextMenus.onClicked.removeListener(onContextMenuItemClicked);
 		await chrome.contextMenus.removeAll();
 
-		if (sss.settings.enableEnginesInContextMenu !== true) return;
-
-		// define parent menu
-		chrome.contextMenus.create({
-			id: "sss",
-			title: sss.settings.contextMenuString,
-			contexts: ["selection"/* , "link" */],
-			// The code in onContextMenuItemClicked already allows SSS to search by a link's text by right clicking it,
-			// so uncommenting the above "link" context would magically add this feature. However, by default, SSS's
-			// contextMenuString uses %s, which Firefox replaces ONLY with the currently selected text, MEANING that if you just
-			// right click a link with nothing selected, the context menu would just say [Search for “%s”] with a literal %s.
-			// Since this feels dumb, the feature is commented-out for now.
-		});
-
 		const engines: SearchEngine[] = sss.settings.searchEngines;
 
-		// define sub options (one per engine)
+		// Parent menu. Uses the extension name and is always enabled; the items
+		// below mirror the engines shown in the selection popup (same isEnabled flag).
+		chrome.contextMenus.create({
+			id: "sss",
+			title: chrome.runtime.getManifest().name,
+			contexts: ["selection"],
+		});
+
+		// define sub options (one per enabled engine)
 		for (let i = 0; i < engines.length; i++)
 		{
 			const engine = engines[i];
-			if (!engine.isEnabledInContextMenu) continue;
+			if (!engine.isEnabled) continue;
 
-			const contextMenuOption = {
+			const contextMenuOption: chrome.contextMenus.CreateProperties = {
 				// MV3 event pages/service workers require an explicit ID for every
 				// item, including separators.
 				id: "" + i,
 				title: undefined,
 				type: undefined,
 				parentId: "sss",
+				// Children must declare the same context as the parent, otherwise
+				// Chrome does not show them under a selection-only submenu.
+				contexts: ["selection"],
 			};
 
 			if (engine.type === SearchEngineType.SSS) {
@@ -923,7 +901,7 @@ namespace SSS
 				}
 				contextMenuOption.title = sssIcons[concreteEngine.id].name;
 			} else {
-				const concreteEngine = engine as SearchEngine_Custom;
+				const concreteEngine = engine as SearchEngine_NonSSS;
 				contextMenuOption.title = concreteEngine.name;
 			}
 
@@ -939,14 +917,7 @@ namespace SSS
 		const menuId: number = parseInt(info.menuItemId as string);
 		const selectedEngine: SearchEngine = sss.settings.searchEngines[menuId];
 		// Chrome context-menu commands are left-click only and do not expose linkText.
-		onSearchEngineClick(selectedEngine, getOpenResultBehaviourForContextMenu(0), info.selectionText, info.pageUrl, null);
-	}
-
-	function getOpenResultBehaviourForContextMenu(button: number)
-	{
-		if (button === 0) return sss.settings.contextMenuItemBehaviour;
-		if (button === 1) return sss.settings.contextMenuItemMiddleButtonBehaviour;
-		/* if (button === 2)  */return sss.settings.contextMenuItemRightButtonBehaviour;
+		onSearchEngineClick(selectedEngine, sss.settings.contextMenuItemBehaviour, info.selectionText, info.pageUrl, null);
 	}
 
 	/* ------------------------------------ */
