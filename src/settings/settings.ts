@@ -44,8 +44,11 @@ namespace SSS_Settings
 		minSelectedCharacters: undefined,
 		maxSelectedCharacters: undefined,
 		popupDelay: undefined,
+		popupOpenBehaviour: undefined,
 		middleMouseSelectionClickMargin: undefined,
 		websiteBlocklist: undefined,
+
+		autoOpenPopupOnSelection: undefined,
 
 		selectionTextFieldLocation: undefined,
 		nPopupIconsPerRow: undefined,
@@ -169,7 +172,6 @@ namespace SSS_Settings
 	{
 		engine.uniqueId = await chrome.runtime.sendMessage({ type: "generateUniqueEngineId" });
 		engine.isEnabled = true;
-		engine.isEnabledInContextMenu = true;
 		return engine;
 	}
 
@@ -548,6 +550,7 @@ namespace SSS_Settings
 		// save all form elements for easy access
 
 		page.engines = document.querySelector("#engines");
+		page.autoOpenPopupOnSelection = document.querySelector("#auto-open-popup-checkbox");
 		page.inputs = document.querySelectorAll("input, select, textarea");
 
 		for (const item of page.inputs) {
@@ -619,6 +622,14 @@ namespace SSS_Settings
 		page.popupBackgroundColor.oninput       = _ => updatePickerColor(page.popupBackgroundColorPicker, page.popupBackgroundColor.value);
 		page.popupHighlightColorPicker.oninput  = _ => updateColorText  (page.popupHighlightColor,        page.popupHighlightColorPicker.value);
 		page.popupHighlightColor.oninput        = _ => updatePickerColor(page.popupHighlightColorPicker,  page.popupHighlightColor.value);
+
+		// The "auto-open popup" checkbox is a friendlier view of the "popupOpenBehaviour" setting:
+		// checked means "auto", unchecked means "off". Other modes remain available in the dropdown.
+		page.autoOpenPopupOnSelection.onchange = _ => {
+			setPopupOpenBehaviour(page.autoOpenPopupOnSelection.checked
+				? SSS.PopupOpenBehaviour.Auto
+				: SSS.PopupOpenBehaviour.Off);
+		};
 
 		// this should use "onfocus" instead of "onclick" but permissions.request can only be called on user input... (it still works with onfocus, but prints errors)
 		page.websiteBlocklist.onclick = _ => {
@@ -1046,6 +1057,9 @@ namespace SSS_Settings
 				updateHtmlElementSetting(page.minSelectedCharacters, value === SSS.PopupOpenBehaviour.Auto);
 				updateHtmlElementSetting(page.maxSelectedCharacters, value === SSS.PopupOpenBehaviour.Auto);
 				updateHtmlElementSetting(page.middleMouseSelectionClickMargin, value === SSS.PopupOpenBehaviour.MiddleMouse);;
+				if (page.autoOpenPopupOnSelection !== undefined) {
+					page.autoOpenPopupOnSelection.checked = value === SSS.PopupOpenBehaviour.Auto;
+				}
 				break;
 			case "showSelectionTextField":
 				updateHtmlElementSetting(page.selectionTextFieldLocation, value === true);
@@ -1068,6 +1082,18 @@ namespace SSS_Settings
 				setting.classList.add("hidden");
 			}
 		}
+	}
+
+	function setPopupOpenBehaviour(value: SSS.PopupOpenBehaviour)
+	{
+		settings.popupOpenBehaviour = value;
+		saveSettings({ popupOpenBehaviour: value });
+
+		// keep the advanced dropdown and the dependent settings in sync
+		if (page.popupOpenBehaviour.value !== value) {
+			page.popupOpenBehaviour.value = value;
+		}
+		updateSetting("popupOpenBehaviour", value);
 	}
 
 	function createSyncChunks(settingsStr: string): { [key: string]: string }
@@ -1134,23 +1160,6 @@ namespace SSS_Settings
 		isEnabledCheckboxParent.appendChild(isEnabledCheckbox);
 
 		engineRow.appendChild(isEnabledCheckboxParent);
-
-		// "is enabled in context menu" element
-
-		const isEnabledInContextMenuCheckboxParent = document.createElement("div");
-		isEnabledInContextMenuCheckboxParent.className = "engine-is-enabled-in-context-menu";
-
-		const isEnabledInContextMenuCheckbox = document.createElement("input");
-		isEnabledInContextMenuCheckbox.type = "checkbox";
-		isEnabledInContextMenuCheckbox.checked = engine.isEnabledInContextMenu;
-		isEnabledInContextMenuCheckbox.autocomplete = "off";
-		isEnabledInContextMenuCheckbox.title = "Show in context menu";
-		isEnabledInContextMenuCheckbox.onchange = _ => {
-			setEnabledInContextMenu(engine, i, isEnabledInContextMenuCheckbox.checked);
-		};
-		isEnabledInContextMenuCheckboxParent.appendChild(isEnabledInContextMenuCheckbox);
-
-		engineRow.appendChild(isEnabledInContextMenuCheckboxParent);
 
 		// icon
 
@@ -1421,17 +1430,6 @@ namespace SSS_Settings
 		checkbox.checked = value;
 
 		engine.isEnabled = value;
-		saveSettings({ searchEngines: settings.searchEngines });
-	}
-
-	function setEnabledInContextMenu(engine: SSS.SearchEngine, i: number, value: boolean)
-	{
-		const engineRow = page.engines.children[i];
-
-		const checkbox = engineRow.querySelector(".engine-is-enabled-in-context-menu input");
-		checkbox.checked = value;
-
-		engine.isEnabledInContextMenu = value;
 		saveSettings({ searchEngines: settings.searchEngines });
 	}
 

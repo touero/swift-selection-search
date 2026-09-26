@@ -196,7 +196,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 		display: flex;
 	}
 	.engine-options {
-		margin-left: 103px;	/* 24 + 24 + 24 + 24 + 4 (dragger + icon + 4px margin-right) + 3 (just padding) */
+		margin-left: 79px;	/* 24 + 24 + 24 + 4 (dragger + P. + icon + 4px margin-right) + 3 (just padding) */
 		margin-top: 3px;
 		margin-bottom: 4px;
 		display: none;
@@ -213,7 +213,6 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 	}
 	.engine-dragger,
 	.engine-is-enabled,
-	.engine-is-enabled-in-context-menu,
 	.engine-icon-img {
 		display: flex;
 		align-items: center;
@@ -649,7 +648,6 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						<div class="engine-itself">
 							<div class="engine-dragger"></div>
 							<div class="engine-is-enabled" title="Show in popup">P.</div>
-							<div class="engine-is-enabled-in-context-menu" title="Show in context menu">C.</div>
 							<div class="engine-icon-img"></div>
 							<div class="engine-name">Name</div>
 							<div class="engine-search-link">Search URL</div>
@@ -665,7 +663,6 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						<div class="engine-itself">
 							<div class="engine-dragger"></div>
 							<div class="engine-is-enabled"></div>
-							<div class="engine-is-enabled-in-context-menu"></div>
 							<div class="engine-icon-img"></div>
 							<div class="engine-add-button"><input type="button" name="addEngineButton" value="Add engine"></div>
 							<div class="engine-add-button"><input type="button" name="addGroupButton" value="Add group"></div>
@@ -712,6 +709,14 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 		<div class="section-name">Popup/icons behaviour</div>
 
 		<div class="section-settings">
+			<div class="setting">
+				<div class="setting-name">Auto-open on text selection</div>
+				<div class="setting-value">
+					<input class="setting-input" type="checkbox" id="auto-open-popup-checkbox" autocomplete="off" checked>
+				</div>
+				<div class="setting-description">When enabled, the SSS popup opens automatically after you select text. Disable it if you prefer not to be interrupted; you can still search by selecting text and right clicking, or by using the keyboard shortcut.</div>
+			</div>
+
 			<div class="setting">
 				<div class="setting-name">Opening behaviour</div>
 				<div class="setting-value">
@@ -1171,12 +1176,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name">Is the context menu enabled?</div>
-				<div class="setting-value">
-					<input class="setting-input" type="checkbox" name="enableEnginesInContextMenu" autocomplete="off" checked>
-				</div>
-				<div class="setting-description">Enables a "Search for..." context menu with your search engines. Appears when you right click the page while having text selected.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description">The context menu is always enabled. When you right click the page with text selected, the "Swift Selection Search" submenu lists the same engines as the popup (the ones enabled with the "P." checkbox in the "Search engines" section).</div>
 			</div>
 
 			<div class="setting">
@@ -1189,56 +1189,10 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						<option value="new-tab-next">Open in new tab (next to current tab)</option>
 						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
 						<option value="new-window">Open in new window</option>
-						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
 					</select>
 				</div>
-				<div class="setting-description">What to do when a search engine is left clicked in the context menu.
-					<br>NOTE: For popup click options, please look in the "Popup/icons behaviour" section.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
-			</div>
-
-			<div class="setting">
-				<div class="setting-name">Context menu right click behaviour</div>
-				<div class="setting-value">
-					<select class="setting-input" name="contextMenuItemRightButtonBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
-						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
-					</select>
-				</div>
-				<div class="setting-description">What to do when a search engine is right clicked in the context menu.
-					<br>NOTE: For popup click options, please look in the "Popup/icons behaviour" section.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
-			</div>
-
-			<div class="setting">
-				<div class="setting-name">Context menu middle click behaviour</div>
-				<div class="setting-value">
-					<select class="setting-input" name="contextMenuItemMiddleButtonBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
-						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
-					</select>
-				</div>
-				<div class="setting-description">What to do when a search engine is middle clicked in the context menu.
-					<br>NOTE: For popup click options, please look in the "Popup/icons behaviour" section.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
-			</div>
-
-			<div class="setting">
-				<div class="setting-name">Context menu title</div>
-				<div class="setting-value">
-					<input class="setting-input" type="text" name="contextMenuString">
-				</div>
-				<div class="setting-description">Title for the SSS submenu in the context menu. If you use %s somewhere in the title, it will be replaced by whatever text is selected when the context menu opens.</div>
+				<div class="setting-description">What to do when a search engine is clicked in the context menu.
+					<br>NOTE: Chrome context-menu items only report left clicks, so there are no separate right/middle click behaviours.</div>
 				<div class="setting-reset"><input type="button" value="Default"></div>
 			</div>
 		</div>
