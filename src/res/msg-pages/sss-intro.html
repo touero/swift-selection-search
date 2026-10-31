@@ -4,12 +4,30 @@
 <head>
 <meta charset="utf-8">
 <style>
+:root {
+	color-scheme: light dark;
+	--text-color: #1f1f1f;
+	--link-color: #0b57d0;
+	--title-color: #1a73e8;
+	--muted-color: #5f6368;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--text-color: #e8eaed;
+		--link-color: #8ab4f8;
+		--title-color: #8ab4f8;
+		--muted-color: #9aa0a6;
+	}
+}
 * {
 	box-sizing: border-box;
 }
 body {
 	margin: 0;
 	padding: 0;
+	background: Canvas;
+	color: var(--text-color);
+	font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 .page {
 	padding: 50px 50px;
@@ -19,34 +37,41 @@ body {
 }
 .header {
 	display: flex;
+	align-items: center;
 }
 .header img {
 	object-fit: contain;
+	width: 96px;
+	height: 96px;
 }
 .header h1 {
 	padding-top: 4px;
 	padding-left: 20px;
-	font: message-box;
 	font-size: 2rem;
+	font-weight: 600;
 }
-.content * {
-	font: message-box;
+.content {
 	font-size: 1rem;
+	line-height: 1.5;
 }
 .content li {
 	margin: 0 0 15px 0;
 }
 .content a {
-	color: black;
+	color: var(--link-color);
 }
 .sss-title {
-	color: #3399FF;
+	color: var(--title-color);
 }
 .sss {
 	font-weight: 600;
 }
 .item-name {
-	color: #3399FF;
+	color: var(--title-color);
+	font-weight: 600;
+}
+.muted {
+	color: var(--muted-color);
 }
 </style>
 <title>Welcome to SSS!</title>
@@ -67,9 +92,11 @@ body {
 
 		<ul>
 			<li><span class="item-name">How to customize something?</span><br>
-				Please go to the Firefox Add-ons menu (the puzzle piece icon!) and access my <a href="/settings/settings.html">Options page</a>.</li>
+				Click Chrome's <strong>Extensions</strong> icon (the puzzle piece) in the toolbar, then click the three-dot menu next to <strong>Swift Selection Search</strong> and choose <strong>Options</strong>. You can also open <span class="muted">chrome://extensions</span>, click <strong>Details</strong> on this extension, and then <strong>Extension options</strong>.</li>
 			<li><span class="item-name">How to add new search engines? Or remove some?</span><br>
 				You can do that in the <a href="/settings/settings.html">Options page</a> as well. :) Be sure to read the instructions at the top!</li>
+			<li><span class="item-name">Where is the popup / how do I pin SSS?</span><br>
+				Click the <strong>Extensions</strong> icon (the puzzle piece) in Chrome's toolbar and use the pin button next to <strong>Swift Selection Search</strong>. The toolbar icon opens SSS's popup.</li>
 			<li><span class="item-name">Found a problem?</span><br>
 				In the <a href="/settings/settings.html">Options page</a> please expand the "Instructions" section and check "Problems?".</li>
 		</ul>

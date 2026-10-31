@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const settingsButton = document.querySelector("#open-settings") as HTMLButtonElement;
 	const githubButton = document.querySelector("#open-github") as HTMLButtonElement;
+	const sponsorButton = document.querySelector("#open-sponsor") as HTMLButtonElement;
 
 	settingsButton.addEventListener("click", () => {
 		chrome.runtime.openOptionsPage();
@@ -11,6 +12,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	githubButton.addEventListener("click", () => {
 		chrome.tabs.create({ url: "https://github.com/touero/swift-selection-search" });
+		window.close();
+	});
+
+	sponsorButton.addEventListener("click", () => {
+		chrome.tabs.create({ url: "https://github.com/sponsors/touero/" });
 		window.close();
 	});
 });

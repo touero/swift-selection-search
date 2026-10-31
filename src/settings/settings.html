@@ -510,7 +510,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 				<div class="setting-name" style="max-width: 160px;">Quick setup</div>
 				<div class="setting-description">
 					<ol>
-						<li>Add new search engines using the <pop>Add engine</pop> button in the <pop>Search engines</pop> section below. SSS comes with a few examples! You can also load engines from Firefox (the ones used in the search bar).</li>
+						<li>Add new search engines using the <pop>Add engine</pop> button in the <pop>Search engines</pop> section below. SSS comes with a few examples! Chrome does not let extensions read your browser search engines, so add any you want manually.</li>
 						<li>Engines appear in a popup and/or context menu when you select text on a page. When you click one, the search URL you defined is called and <popm>{searchTerms}</popm> gets replaced by whatever text is selected.</li>
 						<li>For customizing popup look, context menu, click behaviour, etc, please explore the options in this page. ;)</li>
 					</ol>
@@ -524,8 +524,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						<li>Some blocking lists in your ad blocker can stop certain search engine icons or names from loading! If an icon doesn't show up, please check that. (ex.: YouTube may be blocked by <pop>Fanboy's Annoyance List</pop>. Sometimes simply renaming "YouTube" to something else like "YouTub" works too!)</li>
 						<li>If the popup appears when you pause/unpause a YouTube video, it's because you slightly moved the mouse and selected the country code beside the YouTube logo at the top. ;) Annoying, I know! Try setting the "Minimum selected characters" setting to 3, or use an "Opening behaviour" that isn't "Auto".</li>
 						<li>Some search engine icons may not appear if they are <popm>resource://</popm> links (some imported engines have those). This is normal, unfortunately. Please try finding another icon for the engine, or delete the icon link and SSS will try getting it for you.</li>
-						<li>If the popup does not appear at all on a website or parts of a website, it may be due to that site's content policy. For example, <pop>addons.mozilla.org</pop> disables page modifications, and <pop>bugzilla.mozilla.org</pop> can block images.</li>
-						<li>Is your problem not here? Please go to SSS's page on <a target="_blank" href="https://addons.mozilla.org">Mozilla Add-ons</a> and check how you can report it.</li>
+						<li>If the popup does not appear at all on a website or parts of a website, it may be due to that site's content policy. For example, <pop>chromewebstore.google.com</pop> and other <pop>chrome://</pop> pages do not allow extensions to modify them.</li>
+						<li>Is your problem not here? Please go to SSS's page on the <a target="_blank" href="https://chromewebstore.google.com/detail/swift-selection-search/imminkkhgldibmkjekahkgbgkkmglhdp">Chrome Web Store</a> and check how you can report it.</li>
 					</ul>
 				</div>
 			</div>
@@ -537,8 +537,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						<summary>[Press to expand/collapse]</summary>
 						<ul>
 							<li>It's not always easy to figure out! I'll try to help. :)</li>
-							<li>After using a search bar on a website, the site will usually place what you searched for in the URL somewhere. For example, if you search for <pop>Firefox Add-ons</pop> on Google, Google adds <popm>q=Firefox+Add-ons</popm> to the URL (among probably a lot of other things). <popm>q</popm> is the parameter Google uses for user queries. Other sites will use different structures, but what you wrote should be there (unless the site uses POST requests, but that's another story!).</li>
-							<li>SSS needs a search URL that says <popm>{searchTerms}</popm> in the part where your query usually goes. In the previous example, that means replacing <popm>q=Firefox+Add-ons</popm> with <popm>q={searchTerms}</popm>.</li>
+							<li>After using a search bar on a website, the site will usually place what you searched for in the URL somewhere. For example, if you search for <pop>Chrome Web Store</pop> on Google, Google adds <popm>q=Chrome+Web+Store</popm> to the URL (among probably a lot of other things). <popm>q</popm> is the parameter Google uses for user queries. Other sites will use different structures, but what you wrote should be there (unless the site uses POST requests, but that's another story!).</li>
+							<li>SSS needs a search URL that says <popm>{searchTerms}</popm> in the part where your query usually goes. In the previous example, that means replacing <popm>q=Chrome+Web+Store</popm> with <popm>q={searchTerms}</popm>.</li>
 							<li>Tips
 								<ul>
 									<li>Check the search URLs of the search engines that come with SSS! They may help.</li>
@@ -599,11 +599,11 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 								Variables support using only part of the selected text with the indexing format <popm>{variable[index]}</popm> or <popm>{variable[start:end]}</popm> (start and end both optional).
 								<ul>
 									<li>
-										<popm>{searchTerms[index]}</popm> allows selecting a character at a certain position (zero based), so if you search for "Firefox" and use <popm>{searchTerms[0]}</popm> you will get "F", and if you use <popm>{searchTerms[2]}</popm> you will get "r".
+										<popm>{searchTerms[index]}</popm> allows selecting a character at a certain position (zero based), so if you search for "Chrome" and use <popm>{searchTerms[0]}</popm> you will get "C", and if you use <popm>{searchTerms[2]}</popm> you will get "r".
 									</li>
 
 									<li>
-										<popm>{searchTerms[start:end]}</popm> is for multiple characters, so <popm>{searchTerms[0:2]}</popm> for "Firefox" gives you "Fi", <popm>{searchTerms[2:5]}</popm> gives you "ref", <popm>{searchTerms[2:]}</popm> gives you "refox", and <popm>{searchTerms[:5]}</popm> gives you "Firef".
+										<popm>{searchTerms[start:end]}</popm> is for multiple characters, so <popm>{searchTerms[0:2]}</popm> for "Chrome" gives you "Ch", <popm>{searchTerms[2:5]}</popm> gives you "rom", <popm>{searchTerms[2:]}</popm> gives you "rome", and <popm>{searchTerms[:5]}</popm> gives you "Chrom".
 									</li>
 
 									<li>
@@ -623,7 +623,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 										<popm>{searchTerms(encodeURIComponent)}</popm> applies URL encoding to the text, replacing forbidden URL characters with their escaped versions. For example, % is replaced by %25, / is replaced by %2F, etc. NOTE: SSS <pop>always</pop> applies URL encoding after all replacements happen (otherwise the URL could have invalid characters), so this function should be used only for the rare sites that apply encoding more than once, or apply encoding and then do additional modifications.
 									</li>
 									<li>
-										<popm>{searchTerms(disableURIEncoding)}</popm> disables the default URL encoding that is otherwise always applied to the final text. This is useful for websites that search for links. For example, the Internet Archive website can search for <popm>https://www.mozilla.org</popm> but not for <popm>https%3A%2F%2Fwww.mozilla.org</popm> (the result of the encoding), so you should use <popm>disableURIEncoding</popm>.
+										<popm>{searchTerms(disableURIEncoding)}</popm> disables the default URL encoding that is otherwise always applied to the final text. This is useful for websites that search for links. For example, the Internet Archive website can search for <popm>https://www.google.com</popm> but not for <popm>https%3A%2F%2Fwww.google.com</popm> (the result of the encoding), so you should use <popm>disableURIEncoding</popm>.
 									</li>
 								</ul>
 							</li>
@@ -678,7 +678,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 					<input type="button" name="importBrowserEnginesButton" value="Import"/>
 				</div>
 				<div class="setting-description">Imports the search engines that you usually use in the browser's search bar.
-					<br><br>NOTE: These engines are managed by Firefox and so they can't use some SSS settings. For example, browser engines only respect "Open in this tab" or "Open in new tab" (other click behaviours behave as "Open in new tab").</div>
+					<br><br>NOTE: Chrome does not provide extensions with a list of configured search engines, so this button cannot import them. Add a custom search engine instead.</div>
 				<div class="setting-reset"></div>
 			</div>
 
@@ -898,7 +898,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 				<div class="setting-name">Shortcut to open popup</div>
 				<div class="setting-value">--</div>
 				<div class="setting-description">
-					To change this shortcut, use Firefox's "Manage Extension Shortcuts" menu.
+					To change this shortcut, use Chrome's "Keyboard shortcuts" page (<popm>chrome://extensions/shortcuts</popm>).
 					<br>
 					Default value is Ctrl+Shift+Space (NOTE: for Mac, Ctrl means Command).
 				</div>
@@ -909,7 +909,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 				<div class="setting-name">Shortcut to toggle auto popup opening</div>
 				<div class="setting-value">--</div>
 				<div class="setting-description">
-					To change this shortcut, use Firefox's "Manage Extension Shortcuts" menu.
+					To change this shortcut, use Chrome's "Keyboard shortcuts" page (<popm>chrome://extensions/shortcuts</popm>).
 					<br>
 					Default value is Ctrl+Shift+U (NOTE: for Mac, Ctrl means Command).
 				</div>
@@ -959,7 +959,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 							<popm>docs.google.com/spreadsheets</popm> → Blocks docs.google.com/spreadsheets (other pages still work)<br>
 							<popm>/\.com/</popm> → (Regex) Blocks all websites that contain ".com" somewhere in the URL<br>
 							<br>
-							NOTE: Any regex errors are reported to Firefox' Browser Console (Ctrl+Shift+J) as warnings by SSS. To see them, make sure that "Show Content Messages" is enabled in the top right cog wheel (options) menu of the Browser Console.
+							NOTE: Regex errors are reported to Chrome's DevTools console as warnings by SSS. Open DevTools on the page (Ctrl+Shift+J) or inspect the extension's service worker from <popm>chrome://extensions</popm> to see them.
 						</div>
 					</details>
 				</div>
