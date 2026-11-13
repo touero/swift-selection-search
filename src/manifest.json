@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Swift Selection Search",
-	"version": "1.0.5",
+	"version": "1.0.6",
 	"default_locale": "en",
 	"description": "__MSG_extDescription__",
 	"homepage_url": "https://github.com/touero/swift-selection-search",
