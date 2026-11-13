@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 	applyConfiguredTheme();
+	applyConfiguredLanguage();
 
 	const settingsButton = document.querySelector("#open-settings") as HTMLButtonElement;
 	const githubButton = document.querySelector("#open-github") as HTMLButtonElement;
@@ -20,6 +21,15 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.close();
 	});
 });
+
+function applyConfiguredLanguage()
+{
+	chrome.storage.local.get(["language"], items => {
+		const language = typeof items.language === "string" ? items.language : undefined;
+		SSS_I18N.setLanguage(language);
+		SSS_I18N.applyTranslations(document);
+	});
+}
 
 function applyConfiguredTheme()
 {

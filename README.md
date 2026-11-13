@@ -16,6 +16,7 @@ The upstream project is a Firefox extension. This fork updates its background pr
 - Search from the context menu: right-clicking a selection shows a submenu named after the extension with the same engines as the popup, for users who prefer not to have the popup appear automatically
 - Keyboard shortcuts
 - Import and export settings
+- Bilingual interface (English / 简体中文): the language is auto-detected from the browser by default and can be switched manually in the options page
 
 <a href="https://chromewebstore.google.com/detail/swift-selection-search/imminkkhgldibmkjekahkgbgkkmglhdp">
   <img

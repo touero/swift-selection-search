@@ -2,7 +2,8 @@
 	"manifest_version": 3,
 	"name": "Swift Selection Search",
 	"version": "1.0.5",
-	"description": "Swiftly access your search engines in a popup panel when you select text in a webpage. Context search menu also included!",
+	"default_locale": "en",
+	"description": "__MSG_extDescription__",
 	"homepage_url": "https://github.com/touero/swift-selection-search",
 	"minimum_chrome_version": "102",
 	"icons": {
@@ -34,11 +35,11 @@
 	"commands": {
 		"open-popup": {
 			"suggested_key": { "default": "Ctrl+Shift+Space" },
-			"description": "Open the popup (if text is selected)"
+			"description": "__MSG_commandOpenPopup__"
 		},
 		"toggle-auto-popup": {
 			"suggested_key": { "default": "Ctrl+Shift+U" },
-			"description": "Switch popup opening behaviour between \"Auto\" and \"Keyboard-only\""
+			"description": "__MSG_commandToggleAutoPopup__"
 		}
 	},
 	"web_accessible_resources": [

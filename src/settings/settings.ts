@@ -123,7 +123,8 @@ namespace SSS_Settings
 	let DEBUG;
 	let log;
 
-	let sssIcons: { [id: string] : SSS.SSSIconDefinition; };
+	let rawSssIcons: { [id: string] : SSS.SSSIconDefinition; };	// definitions as sent by the background script (English)
+	let sssIcons: { [id: string] : SSS.SSSIconDefinition; };		// localized definitions actually used by the page
 	let defaultSettings: SSS.Settings;
 	let browserVersion: number;	// unused for now, but we may want it to control compatibility
 	let hasDOMContentLoaded: boolean = false;
@@ -136,7 +137,8 @@ namespace SSS_Settings
 		data => {
 			DEBUG = data.DEBUG;
 			browserVersion = data.browserVersion;
-			sssIcons = data.sssIcons;
+			rawSssIcons = data.sssIcons;
+			sssIcons = localizeSssIcons(rawSssIcons);
 			defaultSettings = data.defaultSettings;
 
 			// now we can initialize things
@@ -211,7 +213,7 @@ namespace SSS_Settings
 		}
 
 		if (nAddedEngines == 0) {
-			alert("No new engines were added.");
+			alert(SSS_I18N.t("alert_noNewEngines"));
 		}
 	}
 
@@ -336,7 +338,7 @@ namespace SSS_Settings
 			groupColorPicker.onclick = ev => {
 				if (!wasIconModifiedByUser) return;
 
-				if (confirm("Revert to the default icon?")) {
+				if (confirm(SSS_I18N.t("groupPopup_revertIconConfirm"))) {
 					groupIconAsImage.classList.add("hidden");
 					groupIconAsCanvas.classList.remove("hidden");
 					setGroupIconColor(groupIconAsCanvas, color);
@@ -360,7 +362,7 @@ namespace SSS_Settings
 		};
 
 		const groupTitleField = document.querySelector("#group-title-field") as HTMLInputElement;
-		groupTitleField.placeholder = "Group name";
+		groupTitleField.placeholder = SSS_I18N.t("groupPopup_groupNamePlaceholder");
 		groupTitleField.value = isEditing ? groupEngineToEdit.name : "";
 		groupTitleField.focus();
 
@@ -413,7 +415,7 @@ namespace SSS_Settings
 					}
 
 					if (findRecursively(engine as SSS.SearchEngine_Group, groupEngineToEdit)) {
-						alert("Adding this group engine would create an infinite cycle, since it contains (directly or indirectly) the group you're currently editing. You can't do that! ;)")
+						alert(SSS_I18N.t("groupPopup_cycleError"))
 						return;
 					}
 				}
@@ -436,6 +438,7 @@ namespace SSS_Settings
 			engineName.textContent = (engine as SSS.SearchEngine_NonSSS).name;
 
 			const deleteButton = groupEnginesListRow.querySelector(".group-remove-engine-button > input") as HTMLInputElement;
+			deleteButton.title = SSS_I18N.t("groupPopup_removeEngine");	// template contents are not translated by applyTranslations
 			deleteButton.onclick = ev => {
 				const index = groupEngineUniqueIds.indexOf(engine.uniqueId);
 				groupEngineUniqueIds.splice(index, 1);
@@ -486,7 +489,7 @@ namespace SSS_Settings
 		const saveButton = document.querySelector("#group-popup-save-button") as HTMLInputElement;
 		saveButton.disabled = groupEngineUniqueIds.length === 0;
 		saveButton.onclick = async _ => {
-			const groupName = groupTitleField.value.length > 0 ? groupTitleField.value : groupEngineToEdit?.name || "Group";
+			const groupName = groupTitleField.value.length > 0 ? groupTitleField.value : groupEngineToEdit?.name || SSS_I18N.t("groupPopup_defaultGroupName");
 			const iconUrl: string = wasIconModifiedByUser ? groupIconAsImage.src : groupIconAsCanvas.toDataURL();
 			const groupData = {
 				name: groupName,
@@ -581,12 +584,18 @@ namespace SSS_Settings
 			// otherwise, if not a "special thing", this is a field
 			else {
 				saveElementValueToSettings(item, true);
+
+				// changing the language needs the whole page to be retranslated
+				// (updateUIWithSettings applies the new language first thing)
+				if (item.name === "language") {
+					updateUIWithSettings();
+				}
 			}
 		};
 
 		page.importBrowserEnginesButton.onclick = _ =>
 		{
-			alert("Chrome does not provide extensions with a list of configured search engines. Add a custom search engine instead.");
+			alert(SSS_I18N.t("alert_browserImportUnsupported"));
 		}
 
 		page.exportSettingsToFileButton.onclick = _ =>
@@ -595,7 +604,7 @@ namespace SSS_Settings
 			chrome.permissions.request({ permissions: ["downloads"] }).then(wasPermissionGranted =>
 			{
 				if (!wasPermissionGranted) {
-					alert("Sorry, you cannot export your file without the \"Downloads\" permission! I know it's weird, but it's really needed. :(");
+					alert(SSS_I18N.t("alert_downloadsPermission"));
 					return;
 				}
 
@@ -638,7 +647,7 @@ namespace SSS_Settings
 			{
 				if (!wasPermissionGranted) {
 					page.websiteBlocklist.blur();	// remove focus
-					alert("Sorry, the website blocklist won't work without the \"Tabs\" permission!");
+					alert(SSS_I18N.t("alert_tabsPermission"));
 				}
 			});
 		};
@@ -743,7 +752,7 @@ namespace SSS_Settings
 
 			settings.searchEngines.push(await createDefaultEngine({
 				type: SSS.SearchEngineType.Custom,
-				name: "New Search Engine",
+				name: SSS_I18N.t("newEngineDefaultName"),
 				searchUrl: searchUrl,
 				iconUrl: iconUrl
 			} as SSS.SearchEngine_Custom));
@@ -790,7 +799,7 @@ namespace SSS_Settings
 
 		page.resetSearchEnginesButton.onclick = _ =>
 		{
-			if (confirm("Really reset search engines to the default ones?"))
+			if (confirm(SSS_I18N.t("confirm_resetEngines")))
 			{
 				const defaultEngines = JSON.parse(JSON.stringify(defaultSettings.searchEngines));
 				settings.searchEngines = defaultEngines;
@@ -801,7 +810,7 @@ namespace SSS_Settings
 
 		page.resetSettingsButton.onclick = _ =>
 		{
-			if (confirm("Really reset all settings to their default values?"))
+			if (confirm(SSS_I18N.t("confirm_resetSettings")))
 			{
 				const searchEngines = settings.searchEngines;	// stash engines
 				settings = JSON.parse(JSON.stringify(defaultSettings));	// copy default settings
@@ -813,7 +822,7 @@ namespace SSS_Settings
 
 		page.loadSettingsFromSyncButton.onclick = _ =>
 		{
-			if (confirm("Really load all settings from Chrome Sync?"))
+			if (confirm(SSS_I18N.t("confirm_loadFromSync")))
 			{
 				chrome.storage.sync.get().then(chunks => {
 					if (DEBUG) { log(chunks); }
@@ -896,9 +905,49 @@ namespace SSS_Settings
 		}
 	}
 
+	// Defines the translation language from the language setting and reapplies
+	// translations to all static page text. Called before the UI is (re)built.
+	function applyLanguage()
+	{
+		SSS_I18N.setLanguage(settings?.language);
+		SSS_I18N.applyTranslations(document);
+
+		sssIcons = localizeSssIcons(rawSssIcons);
+
+		// the group popup's empty-list message comes from this attribute (see CSS)
+		const selectedEnginesContainer = document.querySelector("#group-selected-engines-container");
+		if (selectedEnginesContainer !== null) {
+			selectedEnginesContainer.setAttribute("data-empty-message", SSS_I18N.t("groupPopup_chooseEngines"));
+		}
+	}
+
+	// Returns a copy of the SSS icon definitions with name/description
+	// translated to the current language (keeps the English text as fallback).
+	function localizeSssIcons(icons: { [id: string] : SSS.SSSIconDefinition; }): { [id: string] : SSS.SSSIconDefinition; }
+	{
+		const localized: { [id: string] : SSS.SSSIconDefinition; } = {};
+
+		if (icons !== undefined)
+		{
+			for (const id of Object.keys(icons))
+			{
+				localized[id] = {
+					name: SSS_I18N.translateOrNull(`sssIcon_${id}_name`) ?? icons[id].name,
+					description: SSS_I18N.translateOrNull(`sssIcon_${id}_description`) ?? icons[id].description,
+					iconPath: icons[id].iconPath,
+					isInteractive: icons[id].isInteractive,
+				};
+			}
+		}
+
+		return localized;
+	}
+
 	function updateUIWithSettings()
 	{
 		if (DEBUG) { log("updateUIWithSettings", settings); }
+
+		applyLanguage();	// everything below may generate localized text
 
 		// load UI values from settings
 
@@ -1153,7 +1202,7 @@ namespace SSS_Settings
 		isEnabledCheckbox.type = "checkbox";
 		isEnabledCheckbox.checked = engine.isEnabled;
 		isEnabledCheckbox.autocomplete = "off";
-		isEnabledCheckbox.title = "Show in popup";
+		isEnabledCheckbox.title = SSS_I18N.t("engine_showInPopup");
 		isEnabledCheckbox.onchange = _ => {
 			setEnabledInPopup(engine, i, isEnabledCheckbox.checked);
 		};
@@ -1217,14 +1266,14 @@ namespace SSS_Settings
 			{
 				const engineDescription = document.createElement("div");
 				engineDescription.className = "engine-uneditable engine-description-small";
-				engineDescription.textContent = "[Browser] Engine imported from the chrome.";
+				engineDescription.textContent = SSS_I18N.t("browserEngineDescription");
 				engineRow.appendChild(engineDescription);
 			}
 			else if (engine.type === SSS.SearchEngineType.Group)
 			{
 				// create columns for groups
 				const engineDescription = document.createElement("div");
-				engineDescription.title = "Click to edit this group";
+				engineDescription.title = SSS_I18N.t("groupEngine_clickToEdit");
 				engineDescription.className = "engine-uneditable engine-description-small group-engine-description";
 				engineDescription.textContent = getGroupEngineDescription(engine);
 				engineDescription.onclick = _ => showGroupPopup(engine);
@@ -1304,7 +1353,7 @@ namespace SSS_Settings
 			const copyEngine = engine as SSS.SearchEngine_SSS_Copy;
 
 			const isPlainTextCheckboxParent = createCheckbox(
-				"Copy as plain-text",
+				SSS_I18N.t("engineOption_copyAsPlainText"),
 				`copy-as-plain-text`,
 				copyEngine.isPlainText,
 				isOn => {
@@ -1321,7 +1370,7 @@ namespace SSS_Settings
 			const customEngine = engine as SSS.SearchEngine_Custom;
 
 			const textEncodingDropdownParent = createDropdown(
-				"Text encoding",
+				SSS_I18N.t("engineOption_textEncoding"),
 				`encoding-dropdown-${i}`,
 				encodings,
 				customEngine.encoding,
@@ -1334,11 +1383,11 @@ namespace SSS_Settings
 					saveSettings({ searchEngines: settings.searchEngines });
 				}
 			);
-			textEncodingDropdownParent.title = "If this is a search engine for non-latin alphabets, like Cyrillic, Chinese, Japanese, etc, it might use a different text encoding. You can change it here.";
+			textEncodingDropdownParent.title = SSS_I18N.t("engineOption_textEncodingTitle");
 			engineOptions.appendChild(textEncodingDropdownParent);
 
 			const discardOnOpenCheckboxParent = createCheckbox(
-				"Discard on open (Advanced)",
+				SSS_I18N.t("engineOption_discardOnOpen"),
 				`discard-on-open-${i}`,
 				customEngine.discardOnOpen,
 				isOn => {
@@ -1346,14 +1395,14 @@ namespace SSS_Settings
 					saveSettings({ searchEngines: settings.searchEngines });
 				}
 			);
-			discardOnOpenCheckboxParent.title = "Opens the search but discards the resulting page. Useful if this is a \"non-http\" search engine that opens outside the browser, because that would generate an empty tab/page.";
+			discardOnOpenCheckboxParent.title = SSS_I18N.t("engineOption_discardOnOpenTitle");
 			engineOptions.appendChild(discardOnOpenCheckboxParent);
 		}
 
 		if (!engineOptions.hasChildNodes())
 		{
 			const noExtraOptionsLabel = document.createElement("label");
-			noExtraOptionsLabel.textContent = "No extra options.";
+			noExtraOptionsLabel.textContent = SSS_I18N.t("engineOption_noExtraOptions");
 			noExtraOptionsLabel.style.color = "#999";
 			engineOptions.appendChild(noExtraOptionsLabel);
 		}
@@ -1394,14 +1443,14 @@ namespace SSS_Settings
 		{
 			const encodingGroup = encodingGroups[i];
 			var optionGroup = document.createElement("optgroup");
-			optionGroup.label = encodingGroup.name;
+			optionGroup.label = SSS_I18N.translateOrNull("encodingGroup_" + encodingGroup.name) ?? encodingGroup.name;
 			dropdown.appendChild(optionGroup);
 
 			for (let j = 0; j < encodingGroup.encodings.length; j++)
 			{
 				const value = encodingGroup.encodings[j];
 				var option = document.createElement("option");
-				option.text = value[0];
+				option.text = value[0] === "Default (UTF-8)" ? SSS_I18N.t("encoding_defaultUtf8") : value[0];
 				option.value = value[1];
 				optionGroup.appendChild(option)
 			}
@@ -1567,7 +1616,7 @@ namespace SSS_Settings
 
 		const shortcutField = document.createElement("input");
 		shortcutField.type = "text";
-		shortcutField.title = "Type a single character to use as a shortcut for this engine. Shortcuts can then be used when the popup is visible."
+		shortcutField.title = SSS_I18N.t("engineOption_shortcutTooltip");
 
 		// If this engine already has a shortcut, populate the field with its value.
 		if (engine.shortcut) {
@@ -1602,7 +1651,7 @@ namespace SSS_Settings
 						? sssIcons[(engineWithShortcut as SSS.SearchEngine_SSS).id].name
 						: (engineWithShortcut as SSS.SearchEngine_NonSSS).name;
 
-					const override = confirm(`This shortcut is already assigned to "${engineName}"! Override?`);
+					const override = confirm(SSS_I18N.t("confirm_shortcutOverride", engineName));
 
 					if (override) {
 						engine.shortcut = newValue;
@@ -1642,7 +1691,7 @@ namespace SSS_Settings
 		const deleteButton = document.createElement("input");
 		deleteButton.type = "button";
 		deleteButton.value = "✖";
-		deleteButton.title = "Delete";
+		deleteButton.title = SSS_I18N.t("engine_deleteTooltip");
 		deleteButton.onclick = _ => {
 			// Deleting an engine that belongs to one or more groups must also remove it from the groups, so we ask the user for confirmation.
 			const engineToDelete = settings.searchEngines[i];
@@ -1655,7 +1704,7 @@ namespace SSS_Settings
 				// Create a formatted list with the names of the groups
 				const groupNames = groupsContainingEngine.map(group => `\u2022 ${group.name}`).join("\n");
 
-				if (confirm(`This engine will also be removed from the following group(s): \n\n${groupNames}\n\nAre you sure?`)) {
+				if (confirm(SSS_I18N.t("confirm_deleteFromGroups", groupNames))) {
 					for (const group of groupsContainingEngine) {
 						group.enginesUniqueIds.splice(group.enginesUniqueIds.indexOf(engineToDelete.uniqueId), 1);
 					}
