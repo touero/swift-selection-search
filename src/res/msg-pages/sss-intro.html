@@ -74,7 +74,7 @@ body {
 	color: var(--muted-color);
 }
 </style>
-<title>Welcome to SSS!</title>
+<title data-i18n="intro_title">Welcome to SSS!</title>
 </head>
 
 <body>
@@ -86,25 +86,27 @@ body {
 
 	<div class="content">
 		<br>
-		<p>Hey! Sorry for bothering you. I'm <span class="sss">Swift Selection Search</span>, but friends call me <span class="sss">SSS</span>.</p>
+		<p data-i18n-html="intro_greeting">Hey! Sorry for bothering you. I'm <span class="sss">Swift Selection Search</span>, but friends call me <span class="sss">SSS</span>.</p>
 
-		<p>Try selecting some text and my popup should appear. I'm in the context menu too!</p>
+		<p data-i18n="intro_tryIt">Try selecting some text and my popup should appear. I'm in the context menu too!</p>
 
 		<ul>
-			<li><span class="item-name">How to customize something?</span><br>
-				Click Chrome's <strong>Extensions</strong> icon (the puzzle piece) in the toolbar, then click the three-dot menu next to <strong>Swift Selection Search</strong> and choose <strong>Options</strong>. You can also open <span class="muted">chrome://extensions</span>, click <strong>Details</strong> on this extension, and then <strong>Extension options</strong>.</li>
-			<li><span class="item-name">How to add new search engines? Or remove some?</span><br>
-				You can do that in the <a href="/settings/settings.html">Options page</a> as well. :) Be sure to read the instructions at the top!</li>
-			<li><span class="item-name">Where is the popup / how do I pin SSS?</span><br>
-				Click the <strong>Extensions</strong> icon (the puzzle piece) in Chrome's toolbar and use the pin button next to <strong>Swift Selection Search</strong>. The toolbar icon opens SSS's popup.</li>
-			<li><span class="item-name">Found a problem?</span><br>
-				In the <a href="/settings/settings.html">Options page</a> please expand the "Instructions" section and check "Problems?".</li>
+			<li><span class="item-name" data-i18n="intro_q1_name">How to customize something?</span><br>
+				<span data-i18n-html="intro_q1_text">Click Chrome's <strong>Extensions</strong> icon (the puzzle piece) in the toolbar, then click the three-dot menu next to <strong>Swift Selection Search</strong> and choose <strong>Options</strong>. You can also open <span class="muted">chrome://extensions</span>, click <strong>Details</strong> on this extension, and then <strong>Extension options</strong>.</span></li>
+			<li><span class="item-name" data-i18n="intro_q2_name">How to add new search engines? Or remove some?</span><br>
+				<span data-i18n-html="intro_q2_text">You can do that in the <a href="/settings/settings.html">Options page</a> as well. :) Be sure to read the instructions at the top!</span></li>
+			<li><span class="item-name" data-i18n="intro_q3_name">Where is the popup / how do I pin SSS?</span><br>
+				<span data-i18n-html="intro_q3_text">Click the <strong>Extensions</strong> icon (the puzzle piece) in Chrome's toolbar and use the pin button next to <strong>Swift Selection Search</strong>. The toolbar icon opens SSS's popup.</span></li>
+			<li><span class="item-name" data-i18n="intro_q4_name">Found a problem?</span><br>
+				<span data-i18n-html="intro_q4_text">In the <a href="/settings/settings.html">Options page</a> please expand the "Instructions" section and check "Problems?".</span></li>
 		</ul>
 
-		<p>Thank you!<br>
+		<p data-i18n-html="intro_thanks">Thank you!<br>
 		<span class="sss">SSS</span></p>
 	</div>
 </div>
+<script src="../../i18n.js"></script>
+<script src="sss-intro.js"></script>
 </body>
 
 </html>

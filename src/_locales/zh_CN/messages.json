@@ -1,0 +1,11 @@
+{
+	"extDescription": {
+		"message": "在网页中选中文字时，通过弹窗面板快速使用你的搜索引擎。还包含右键搜索菜单！"
+	},
+	"commandOpenPopup": {
+		"message": "打开弹窗（如果有选中文字）"
+	},
+	"commandToggleAutoPopup": {
+		"message": "在“自动”和“仅键盘”之间切换弹窗打开行为"
+	}
+}

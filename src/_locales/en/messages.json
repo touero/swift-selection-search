@@ -1,0 +1,11 @@
+{
+	"extDescription": {
+		"message": "Swiftly access your search engines in a popup panel when you select text in a webpage. Context search menu also included!"
+	},
+	"commandOpenPopup": {
+		"message": "Open the popup (if text is selected)"
+	},
+	"commandToggleAutoPopup": {
+		"message": "Switch popup opening behaviour between \"Auto\" and \"Keyboard-only\""
+	}
+}

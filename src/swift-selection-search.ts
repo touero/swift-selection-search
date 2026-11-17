@@ -89,6 +89,8 @@ namespace SSS
 		// Any unspecified settings go here. This is needed to support legacy variables that are now unused, like contextMenuEnginesFilter.
 		[key: string]: any;
 
+		language: string;	// "auto", "en" or "zh_CN"
+
 		useDarkModeInOptionsPage: boolean;
 
 		searchEngineIconsSource: SearchEngineIconsSource;
@@ -261,6 +263,8 @@ namespace SSS
 	const defaultSettings: Settings =
 	{
 		// NOTE: When adding new variables, keep the same order used in the settings page, roughly divided by section.
+
+		language: "auto",
 
 		useDarkModeInOptionsPage: false,
 
@@ -495,6 +499,10 @@ namespace SSS
 			uniqueIdToEngineDictionary[engine.uniqueId] = engine;
 		}
 
+		// translations depend on the language setting, so define it before
+		// anything that shows text (context menu, popup settings) is built
+		SSS_I18N.setLanguage(settings.language);
+
 		// save settings and also keep subsets of them for content-script-related purposes
 		sss.settings = settings;
 		sss.activationSettingsForContentScript = getActivationSettingsForContentScript(settings);
@@ -535,7 +543,7 @@ namespace SSS
 		contentScriptSettings.settings = Object.assign({}, settings);	// shallow copy
 		contentScriptSettings.settings.searchEngines = settings.searchEngines.filter(engine => engine.isEnabled);	// pass only enabled engines
 		contentScriptSettings.settings.searchEnginesCache = {};
-		contentScriptSettings.sssIcons = sssIcons;	// add information about special SSS icons (normally not in settings because it doesn't change)
+		contentScriptSettings.sssIcons = getLocalizedSssIcons();	// add information about special SSS icons (normally not in settings because it doesn't change)
 
 		// get icon cache for enabled engines
 		for (const engine of contentScriptSettings.settings.searchEngines)
@@ -549,6 +557,26 @@ namespace SSS
 			}
 		}
 		return contentScriptSettings;
+	}
+
+	// Returns a copy of the special SSS icon definitions with name/description
+	// translated to the current language (falls back to the built-in English).
+	function getLocalizedSssIcons(): { [id: string] : SSSIconDefinition; }
+	{
+		const localizedIcons: { [id: string] : SSSIconDefinition; } = {};
+
+		for (const id of Object.keys(sssIcons))
+		{
+			const icon = sssIcons[id];
+			localizedIcons[id] = {
+				name: SSS_I18N.translateOrNull(`sssIcon_${id}_name`) ?? icon.name,
+				description: SSS_I18N.translateOrNull(`sssIcon_${id}_description`) ?? icon.description,
+				iconPath: icon.iconPath,
+				isInteractive: icon.isInteractive,
+			};
+		}
+
+		return localizedIcons;
 	}
 
 	// Builds an array of regular expressions based on the websites in the blocklist.
@@ -605,6 +633,7 @@ namespace SSS
 		let shouldSave: boolean = false;
 
 		// in the comments you can see the first version of SSS where the setting was included
+		if (createSettingIfNonExistent(settings, "language"))                             shouldSave = true; // 1.0.6
 		if (createSettingIfNonExistent(settings, "popupItemVerticalPadding"))             shouldSave = true; // 3.1.0
 		if (createSettingIfNonExistent(settings, "allowPopupOnEditableFields"))           shouldSave = true; // 3.6.0
 		if (createSettingIfNonExistent(settings, "popupBorderRadius"))                    shouldSave = true; // 3.9.1
@@ -865,6 +894,7 @@ namespace SSS
 		await chrome.contextMenus.removeAll();
 
 		const engines: SearchEngine[] = sss.settings.searchEngines;
+		const localizedIcons = getLocalizedSssIcons();	// titles change with the language setting
 
 		// Parent menu. Uses the extension name and is always enabled; the items
 		// below mirror the engines shown in the selection popup (same isEnabled flag).
@@ -899,7 +929,7 @@ namespace SSS
 					chrome.contextMenus.create(contextMenuOption);
 					continue;
 				}
-				contextMenuOption.title = sssIcons[concreteEngine.id].name;
+				contextMenuOption.title = localizedIcons[concreteEngine.id].name;
 			} else {
 				const concreteEngine = engine as SearchEngine_NonSSS;
 				contextMenuOption.title = concreteEngine.name;

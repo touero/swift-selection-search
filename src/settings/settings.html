@@ -339,7 +339,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 		text-align: center; /* can't format this inside ::before */
 	}
 	#group-selected-engines-container:empty::before {
-		content: "Choose the engines that will belong to this group:";
+		content: attr(data-empty-message);	/* the attribute is set (and translated) by settings.js */
 		padding: 0.5rem;
 		font-size: 0.9rem;
 		font-style: italic;
@@ -490,7 +490,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 		background: #3c3c42;
 	}
 </style>
-<title>SSS Options</title>
+<title data-i18n="page_title">SSS Options</title>
 <link rel="shortcut icon" type="image/png" href="/icons/icon48.png"/>
 </head>
 
@@ -498,17 +498,36 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 <div id="settings">
 	<div class="header">
 		<img src="/icons/icon96.png" alt="">
-		<h1><span style="color: #3399FF">Swift Selection Search (SSS)</span><br>Options</h1>
-		<input type="button" name="toggleDarkMode" value="🌓" title="Switch between Dark/Light options page">
+		<h1 data-i18n-html="header_title"><span style="color: #3399FF">Swift Selection Search (SSS)</span><br>Options</h1>
+		<input type="button" name="toggleDarkMode" value="🌓" title="Switch between Dark/Light options page" data-i18n-title="toggleDarkMode_title">
 	</div>
 
-	<div class="section" id="section_instructions">
-		<div class="section-name">Instructions</div>
+	<div class="section" id="section_general">
+		<div class="section-name" data-i18n="section_general">General</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name" style="max-width: 160px;">Quick setup</div>
-				<div class="setting-description">
+				<div class="setting-name" data-i18n="setting_language_name">Language</div>
+				<div class="setting-value">
+					<select class="setting-input" name="language">
+						<option value="auto" data-i18n="language_option_auto">Auto (follow browser language)</option>
+						<option value="en">English</option>
+						<option value="zh_CN">简体中文</option>
+					</select>
+				</div>
+				<div class="setting-description" data-i18n-html="setting_language_desc">Language used by SSS's pages, popup tooltips and context menu. "Auto" follows your browser's UI language.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
+			</div>
+		</div>
+	</div>
+
+	<div class="section" id="section_instructions">
+		<div class="section-name" data-i18n="section_instructions">Instructions</div>
+
+		<div class="section-settings">
+			<div class="setting">
+				<div class="setting-name" style="max-width: 160px;" data-i18n="instructions_quickSetup_name">Quick setup</div>
+				<div class="setting-description" data-i18n-html="instructions_quickSetup_html">
 					<ol>
 						<li>Add new search engines using the <pop>Add engine</pop> button in the <pop>Search engines</pop> section below. SSS comes with a few examples! Chrome does not let extensions read your browser search engines, so add any you want manually.</li>
 						<li>Engines appear in a popup and/or context menu when you select text on a page. When you click one, the search URL you defined is called and <popm>{searchTerms}</popm> gets replaced by whatever text is selected.</li>
@@ -518,8 +537,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			</div>
 
 			<div class="setting">
-				<div class="setting-name" style="max-width: 160px;">Problems?</div>
-				<div class="setting-description">
+				<div class="setting-name" style="max-width: 160px;" data-i18n="instructions_problems_name">Problems?</div>
+				<div class="setting-description" data-i18n-html="instructions_problems_html">
 					<ul>
 						<li>Some blocking lists in your ad blocker can stop certain search engine icons or names from loading! If an icon doesn't show up, please check that. (ex.: YouTube may be blocked by <pop>Fanboy's Annoyance List</pop>. Sometimes simply renaming "YouTube" to something else like "YouTub" works too!)</li>
 						<li>If the popup appears when you pause/unpause a YouTube video, it's because you slightly moved the mouse and selected the country code beside the YouTube logo at the top. ;) Annoying, I know! Try setting the "Minimum selected characters" setting to 3, or use an "Opening behaviour" that isn't "Auto".</li>
@@ -531,8 +550,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			</div>
 
 			<div class="setting">
-				<div class="setting-name" style="max-width: 160px;">I don't know how to add a particular site...</div>
-				<div class="setting-description">
+				<div class="setting-name" style="max-width: 160px;" data-i18n="instructions_addSite_name">I don't know how to add a particular site...</div>
+				<div class="setting-description" data-i18n-html="instructions_addSite_html">
 					<details>
 						<summary>[Press to expand/collapse]</summary>
 						<ul>
@@ -553,8 +572,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			</div>
 
 			<div class="setting">
-				<div class="setting-name" style="max-width: 160px;">Advanced usage</div>
-				<div class="setting-description">
+				<div class="setting-name" style="max-width: 160px;" data-i18n="instructions_advanced_name">Advanced usage</div>
+				<div class="setting-description" data-i18n-html="instructions_advanced_html">
 					<details>
 						<summary>[Press to expand/collapse]</summary>
 						<ul>
@@ -579,22 +598,22 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 									</li>
 
 									<li>
-									Replacements can also be <a target="_blank" href="https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_Expressions">regular expressions</a>. If you don't know these, it's okay. It's way beyond the scope of these instructions to explain them.
-									<ul>
-										<li>
-											These come in the form of either <popm>{searchTerms{re/your_regex_here/flags_here}}</popm>, where the selected text will be replaced with only the characters that match the expression, or <popm>{searchTerms{re/your_regex_here/flags_here|replacement}}</popm>, where the match will be replaced with the replacement. If you use the <popm>g</popm> flag that matches all occurrences, each of them will be replaced with the replacement.
-										</li>
+										Replacements can also be <a target="_blank" href="https://developer.mozilla.org/docs/Web/JavaScript/Guide/Regular_Expressions">regular expressions</a>. If you don't know these, it's okay. It's way beyond the scope of these instructions to explain them.
+										<ul>
+											<li>
+												These come in the form of either <popm>{searchTerms{re/your_regex_here/flags_here}}</popm>, where the selected text will be replaced with only the characters that match the expression, or <popm>{searchTerms{re/your_regex_here/flags_here|replacement}}</popm>, where the match will be replaced with the replacement. If you use the <popm>g</popm> flag that matches all occurrences, each of them will be replaced with the replacement.
+											</li>
 
-										<li>
-											Replacements support match groups, so $1 in the replacement corresponds to the first match, $2 to the second, etc.
-										</li>
+											<li>
+												Replacements support match groups, so $1 in the replacement corresponds to the first match, $2 to the second, etc.
+											</li>
 
-										<li>
-											As examples, if you want to remove all non-alphanumeric characters from the searchTerms you can use <popm>{searchTerms{re/[0-9a-z]/gi}}</popm> (<popm>g</popm> finds all matches and <popm>i</popm> is case insensitiveness). To find words separated by spaces and switch them you can use <popm>{searchTerms{re/(\w+)\s+(\w+)/g|$2 $1}}</popm>. This will transform any two words like "John Smith" into "Smith John".
-										</li>
+											<li>
+												As examples, if you want to remove all non-alphanumeric characters from the searchTerms you can use <popm>{searchTerms{re/[0-9a-z]/gi}}</popm> (<popm>g</popm> finds all matches and <popm>i</popm> is case insensitiveness). To find words separated by spaces and switch them you can use <popm>{searchTerms{re/(\w+)\s+(\w+)/g|$2 $1}}</popm>. This will transform any two words like "John Smith" into "Smith John".
+											</li>
+										</ul>
 									</ul>
-								</ul>
-							</li>
+								</li>
 							<li>
 								Variables support using only part of the selected text with the indexing format <popm>{variable[index]}</popm> or <popm>{variable[start:end]}</popm> (start and end both optional).
 								<ul>
@@ -639,7 +658,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 	</div>
 
 	<div class="section collapsed-section" id="section_searchEngines">
-		<div class="section-name">Search engines</div>
+		<div class="section-name" data-i18n="section_searchEngines">Search engines</div>
 
 		<div class="section-settings">
 			<div class="setting">
@@ -647,12 +666,12 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 					<div class="engine-table-row static-row">
 						<div class="engine-itself">
 							<div class="engine-dragger"></div>
-							<div class="engine-is-enabled" title="Show in popup">P.</div>
+							<div class="engine-is-enabled" title="Show in popup" data-i18n-title="engine_showInPopup">P.</div>
 							<div class="engine-icon-img"></div>
-							<div class="engine-name">Name</div>
-							<div class="engine-search-link">Search URL</div>
-							<div class="engine-icon-link">Icon URL</div>
-							<div class="engine-shortcut" title="Shortcut">S.</div>
+							<div class="engine-name" data-i18n="engine_table_name">Name</div>
+							<div class="engine-search-link" data-i18n="engine_table_searchUrl">Search URL</div>
+							<div class="engine-icon-link" data-i18n="engine_table_iconUrl">Icon URL</div>
+							<div class="engine-shortcut" title="Shortcut" data-i18n-title="engine_table_shortcut">S.</div>
 							<div class="engine-delete"></div>
 						</div>
 					</div>
@@ -664,240 +683,240 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 							<div class="engine-dragger"></div>
 							<div class="engine-is-enabled"></div>
 							<div class="engine-icon-img"></div>
-							<div class="engine-add-button"><input type="button" name="addEngineButton" value="Add engine"></div>
-							<div class="engine-add-button"><input type="button" name="addGroupButton" value="Add group"></div>
-							<div class="engine-add-button"><input type="button" name="addSeparatorButton" value="Add separator"></div>
+							<div class="engine-add-button"><input type="button" name="addEngineButton" value="Add engine" data-i18n-value="b_addEngine"></div>
+							<div class="engine-add-button"><input type="button" name="addGroupButton" value="Add group" data-i18n-value="b_addGroup"></div>
+							<div class="engine-add-button"><input type="button" name="addSeparatorButton" value="Add separator" data-i18n-value="b_addSeparator"></div>
 						</div>
 					</div>
 				</div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Import browser search engines</div>
+				<div class="setting-name" data-i18n="s_importBrowserEngines_name">Import browser search engines</div>
 				<div class="setting-value">
-					<input type="button" name="importBrowserEnginesButton" value="Import"/>
+					<input type="button" name="importBrowserEnginesButton" value="Import" data-i18n-value="b_import"/>
 				</div>
-				<div class="setting-description">Imports the search engines that you usually use in the browser's search bar.
+				<div class="setting-description" data-i18n-html="s_importBrowserEngines_desc">Imports the search engines that you usually use in the browser's search bar.
 					<br><br>NOTE: Chrome does not provide extensions with a list of configured search engines, so this button cannot import them. Add a custom search engine instead.</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Reset search engines</div>
+				<div class="setting-name" data-i18n="s_resetEngines_name">Reset search engines</div>
 				<div class="setting-value">
-					<input type="button" name="resetSearchEnginesButton" value="Reset engines">
+					<input type="button" name="resetSearchEnginesButton" value="Reset engines" data-i18n-value="b_resetEngines">
 				</div>
-				<div class="setting-description">Resets search engines to the defaults (as if running SSS for the first time).</div>
+				<div class="setting-description" data-i18n-html="s_resetEngines_desc">Resets search engines to the defaults (as if running SSS for the first time).</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Source for automatic icon URLs</div>
+				<div class="setting-name" data-i18n="s_iconsSource_name">Source for automatic icon URLs</div>
 				<div class="setting-value">
 					<select class="setting-input" name="searchEngineIconsSource">
-						<option value="none">None</option>
+						<option value="none" data-i18n="o_iconsSource_none">None</option>
 						<option value="favicon-kit">Favicon Kit (faviconkit.com)</option>
 					</select>
 				</div>
-				<div class="setting-description">Defines the origin of automatic search engine icons when you add a new engine. Change this option if you have privacy concerns or would prefer to add all icons yourself.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconsSource_desc">Defines the origin of automatic search engine icons when you add a new engine. Change this option if you have privacy concerns or would prefer to add all icons yourself.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 		</div>
 	</div>
 
 	<div class="section collapsed-section" id="section_popupBehaviour">
-		<div class="section-name">Popup/icons behaviour</div>
+		<div class="section-name" data-i18n="section_popupBehaviour">Popup/icons behaviour</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name">Auto-open on text selection</div>
+				<div class="setting-name" data-i18n="s_autoOpen_name">Auto-open on text selection</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" id="auto-open-popup-checkbox" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">When enabled, the SSS popup opens automatically after you select text. Disable it if you prefer not to be interrupted; you can still search by selecting text and right clicking, or by using the keyboard shortcut.</div>
+				<div class="setting-description" data-i18n-html="s_autoOpen_desc">When enabled, the SSS popup opens automatically after you select text. Disable it if you prefer not to be interrupted; you can still search by selecting text and right clicking, or by using the keyboard shortcut.</div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Opening behaviour</div>
+				<div class="setting-name" data-i18n="s_openBehaviour_name">Opening behaviour</div>
 				<div class="setting-value">
 					<select class="setting-input" name="popupOpenBehaviour">
-						<option value="off">Off (never)</option>
-						<option value="auto">Auto (opens on text selection)</option>
-						<option value="hold-alt">Hold Alt (hold the Alt key [Option on Mac] when selecting)</option>
-						<option value="keyboard">Keyboard-only (press the keyboard shortcut after text is selected)</option>
-						<option value="middle-mouse">Middle mouse button (press the middle button on the selected text)</option>
+						<option value="off" data-i18n="o_open_off">Off (never)</option>
+						<option value="auto" data-i18n="o_open_auto">Auto (opens on text selection)</option>
+						<option value="hold-alt" data-i18n="o_open_holdAlt">Hold Alt (hold the Alt key [Option on Mac] when selecting)</option>
+						<option value="keyboard" data-i18n="o_open_keyboard">Keyboard-only (press the keyboard shortcut after text is selected)</option>
+						<option value="middle-mouse" data-i18n="o_open_middleMouse">Middle mouse button (press the middle button on the selected text)</option>
 					</select>
 				</div>
-				<div class="setting-description">When to open the popup.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_openBehaviour_desc">When to open the popup.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Middle mouse click margin</div>
+				<div class="setting-name" data-i18n="s_middleClickMargin_name">Middle mouse click margin</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="middleMouseSelectionClickMargin" min="0">
 				</div>
-				<div class="setting-description">Adds a margin in pixels so you can middle-click near the selection as well as on it.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_middleClickMargin_desc">Adds a margin in pixels so you can middle-click near the selection as well as on it.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Minimum selected characters</div>
+				<div class="setting-name" data-i18n="s_minChars_name">Minimum selected characters</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="minSelectedCharacters" min="0">
 				</div>
-				<div class="setting-description">In "Auto" opening behaviour, only shows popup if you have at least this number of characters selected (discarding surrounding spaces). Setting to 0 always shows.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_minChars_desc">In "Auto" opening behaviour, only shows popup if you have at least this number of characters selected (discarding surrounding spaces). Setting to 0 always shows.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Maximum selected characters</div>
+				<div class="setting-name" data-i18n="s_maxChars_name">Maximum selected characters</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="maxSelectedCharacters" min="0">
 				</div>
-				<div class="setting-description">In "Auto" opening behaviour, only shows popup if you have a maximum of this number of characters selected (discarding surrounding spaces). Setting to 0 always shows.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_maxChars_desc">In "Auto" opening behaviour, only shows popup if you have a maximum of this number of characters selected (discarding surrounding spaces). Setting to 0 always shows.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Popup delay</div>
+				<div class="setting-name" data-i18n="s_popupDelay_name">Popup delay</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupDelay" min="0">
 				</div>
-				<div class="setting-description">Number of milliseconds to delay the popup when selecting text. It can avoid wrong clicks if you usually triple click to select paragraphs.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupDelay_desc">Number of milliseconds to delay the popup when selecting text. It can avoid wrong clicks if you usually triple click to select paragraphs.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup location</div>
+				<div class="setting-name" data-i18n="s_popupLocation_name">Popup location</div>
 				<div class="setting-value">
 					<select class="setting-input" name="popupLocation">
-						<option value="selection">Bottom right corner of selection "rectangle"</option>
-						<option value="cursor">At cursor location</option>
+						<option value="selection" data-i18n="o_popupLoc_selection">Bottom right corner of selection "rectangle"</option>
+						<option value="cursor" data-i18n="o_popupLoc_cursor">At cursor location</option>
 					</select>
 				</div>
-				<div class="setting-description">Where the popup should appear after selecting text.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupLocation_desc">Where the popup should appear after selecting text.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Left mouse button click</div>
+				<div class="setting-name" data-i18n="s_mouseLeft_name">Left mouse button click</div>
 				<div class="setting-value">
 					<select class="setting-input" name="mouseLeftButtonBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
+						<option value="this-tab" data-i18n="o_open_thisTab">Open in this tab</option>
+						<option value="new-tab" data-i18n="o_open_newTab">Open in new tab</option>
+						<option value="new-bg-tab" data-i18n="o_open_newBgTab">Open in new background tab</option>
+						<option value="new-tab-next" data-i18n="o_open_newTabNext">Open in new tab (next to current tab)</option>
+						<option value="new-bg-tab-next" data-i18n="o_open_newBgTabNext">Open in new background tab (next to current tab)</option>
+						<option value="new-window" data-i18n="o_open_newWindow">Open in new window</option>
 						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
 					</select>
 				</div>
-				<div class="setting-description">What to do when a search engine is clicked with the left mouse button.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_mouseLeft_desc">What to do when a search engine is clicked with the left mouse button.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Right mouse button click</div>
+				<div class="setting-name" data-i18n="s_mouseRight_name">Right mouse button click</div>
 				<div class="setting-value">
 					<select class="setting-input" name="mouseRightButtonBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
+						<option value="this-tab" data-i18n="o_open_thisTab">Open in this tab</option>
+						<option value="new-tab" data-i18n="o_open_newTab">Open in new tab</option>
+						<option value="new-bg-tab" data-i18n="o_open_newBgTab">Open in new background tab</option>
+						<option value="new-tab-next" data-i18n="o_open_newTabNext">Open in new tab (next to current tab)</option>
+						<option value="new-bg-tab-next" data-i18n="o_open_newBgTabNext">Open in new background tab (next to current tab)</option>
+						<option value="new-window" data-i18n="o_open_newWindow">Open in new window</option>
 						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
 					</select>
 				</div>
-				<div class="setting-description">What to do when a search engine is clicked with the right mouse button.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_mouseRight_desc">What to do when a search engine is clicked with the right mouse button.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Middle mouse button click</div>
+				<div class="setting-name" data-i18n="s_mouseMiddle_name">Middle mouse button click</div>
 				<div class="setting-value">
 					<select class="setting-input" name="mouseMiddleButtonBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
+						<option value="this-tab" data-i18n="o_open_thisTab">Open in this tab</option>
+						<option value="new-tab" data-i18n="o_open_newTab">Open in new tab</option>
+						<option value="new-bg-tab" data-i18n="o_open_newBgTab">Open in new background tab</option>
+						<option value="new-tab-next" data-i18n="o_open_newTabNext">Open in new tab (next to current tab)</option>
+						<option value="new-bg-tab-next" data-i18n="o_open_newBgTabNext">Open in new background tab (next to current tab)</option>
+						<option value="new-window" data-i18n="o_open_newWindow">Open in new window</option>
 						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
 					</select>
 				</div>
-				<div class="setting-description">What to do when a search engine is clicked with the middle mouse button.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_mouseMiddle_desc">What to do when a search engine is clicked with the middle mouse button.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">When using a shortcut</div>
+				<div class="setting-name" data-i18n="s_shortcutBehaviour_name">When using a shortcut</div>
 				<div class="setting-value">
 					<select class="setting-input" name="shortcutBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
+						<option value="this-tab" data-i18n="o_open_thisTab">Open in this tab</option>
+						<option value="new-tab" data-i18n="o_open_newTab">Open in new tab</option>
+						<option value="new-bg-tab" data-i18n="o_open_newBgTab">Open in new background tab</option>
+						<option value="new-tab-next" data-i18n="o_open_newTabNext">Open in new tab (next to current tab)</option>
+						<option value="new-bg-tab-next" data-i18n="o_open_newBgTabNext">Open in new background tab (next to current tab)</option>
+						<option value="new-window" data-i18n="o_open_newWindow">Open in new window</option>
 						<!-- <option value="new-bg-window">(unsupported in Firefox) Open in new background window</option> -->
 					</select>
 				</div>
-				<div class="setting-description">What to do when searching via shortcut. Also applies when selecting the engine with the TAB key.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_shortcutBehaviour_desc">What to do when searching via shortcut. Also applies when selecting the engine with the TAB key.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Allow popup on editable fields</div>
+				<div class="setting-name" data-i18n="s_allowEditable_name">Allow popup on editable fields</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="allowPopupOnEditableFields" autocomplete="off">
 				</div>
-				<div class="setting-description">Show the popup when text is selected with the mouse on an editable text field, such as a login form, a search bar, or an email composing window. NOTE: "Shortcut to open popup" ignores this option and always works on editable fields.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_allowEditable_desc">Show the popup when text is selected with the mouse on an editable text field, such as a login form, a search bar, or an email composing window. NOTE: "Shortcut to open popup" ignores this option and always works on editable fields.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Hide popup on page scroll</div>
+				<div class="setting-name" data-i18n="s_hideOnScroll_name">Hide popup on page scroll</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="hidePopupOnPageScroll" autocomplete="off">
 				</div>
-				<div class="setting-description">Hides the popup when the page moves.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_hideOnScroll_desc">Hides the popup when the page moves.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Hide popup on right click</div>
+				<div class="setting-name" data-i18n="s_hideOnRightClick_name">Hide popup on right click</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="hidePopupOnRightClick" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">Hides the popup when the right mouse button is pressed outside of the popup. NOTE: Left or middle clicks always hide it regardless.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_hideOnRightClick_desc">Hides the popup when the right mouse button is pressed outside of the popup. NOTE: Left or middle clicks always hide it regardless.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Hide popup on search engine click</div>
+				<div class="setting-name" data-i18n="s_hideOnSearch_name">Hide popup on search engine click</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="hidePopupOnSearch" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">Hides the popup when a search engine is clicked. This also applies when using shortcuts.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_hideOnSearch_desc">Hides the popup when a search engine is clicked. This also applies when using shortcuts.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Allow search engine shortcuts without popup</div>
+				<div class="setting-name" data-i18n="s_shortcutWithoutPopup_name">Allow search engine shortcuts without popup</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="useEngineShortcutWithoutPopup" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">Enables search engine shortcuts even if the popup is not visible.<br>
+				<div class="setting-description" data-i18n-html="s_shortcutWithoutPopup_desc">Enables search engine shortcuts even if the popup is not visible.<br>
 					NOTE: A shortcut will not work if the engine is not enabled for the popup (even though the popup isn't needed). They also won't work when writing in an editable field.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Shortcut to open popup</div>
+				<div class="setting-name" data-i18n="s_openPopupShortcut_name">Shortcut to open popup</div>
 				<div class="setting-value">--</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_openPopupShortcut_desc">
 					To change this shortcut, use Chrome's "Keyboard shortcuts" page (<popm>chrome://extensions/shortcuts</popm>).
 					<br>
 					Default value is Ctrl+Shift+Space (NOTE: for Mac, Ctrl means Command).
@@ -906,9 +925,9 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Shortcut to toggle auto popup opening</div>
+				<div class="setting-name" data-i18n="s_toggleAutoPopupShortcut_name">Shortcut to toggle auto popup opening</div>
 				<div class="setting-value">--</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_toggleAutoPopupShortcut_desc">
 					To change this shortcut, use Chrome's "Keyboard shortcuts" page (<popm>chrome://extensions/shortcuts</popm>).
 					<br>
 					Default value is Ctrl+Shift+U (NOTE: for Mac, Ctrl means Command).
@@ -917,33 +936,33 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup animation duration</div>
+				<div class="setting-name" data-i18n="s_animationDuration_name">Popup animation duration</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupAnimationDuration" min="0">
 				</div>
-				<div class="setting-description">Duration of popup animation, in milliseconds. Use 0 to make the popup show instantly.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_animationDuration_desc">Duration of popup animation, in milliseconds. Use 0 to make the popup show instantly.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Auto copy to clipboard</div>
+				<div class="setting-name" data-i18n="s_autoCopy_name">Auto copy to clipboard</div>
 				<div class="setting-value">
 					<select class="setting-input" name="autoCopyToClipboard">
-						<option value="off">Off</option>
-						<option value="always">Always</option>
-						<option value="non-editable-only">Only for non-editable text</option>
+						<option value="off" data-i18n="o_autoCopy_off">Off</option>
+						<option value="always" data-i18n="o_autoCopy_always">Always</option>
+						<option value="non-editable-only" data-i18n="o_autoCopy_nonEditableOnly">Only for non-editable text</option>
 					</select>
 				</div>
-				<div class="setting-description">Automatically copy selected text to clipboard when popup opens.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_autoCopy_desc">Automatically copy selected text to clipboard when popup opens.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Website blocklist</div>
+				<div class="setting-name" data-i18n="s_blocklist_name">Website blocklist</div>
 				<div class="setting-value" style="z-index: 1;">
 					<textarea class="setting-input" name="websiteBlocklist" style="font-size: 12px;"></textarea>
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_blocklist_desc">
 					Disables the popup on these URLs. Write each URL on a different line, WITHOUT using "http", "https", or any other protocol. URLs support the wildcard * (meaning "any number of characters, including zero") or regular expressions (regex) in the form /your_regex_here/.
 					<br><br>
 					NOTE: Opening the popup via the keyboard shortcut always works, regardless of this setting.
@@ -963,296 +982,296 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 						</div>
 					</details>
 				</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 		</div>
 	</div>
 
 	<div class="section collapsed-section" id="section_popupAppearance">
-		<div class="section-name">Popup/icons look</div>
+		<div class="section-name" data-i18n="section_popupAppearance">Popup/icons look</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name">Display text box</div>
+				<div class="setting-name" data-i18n="s_showTextField_name">Display text box</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="showSelectionTextField" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">Shows a text box with the current text selection in the popup. Useful to make edits to the text before searching with one of the engines.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_showTextField_desc">Shows a text box with the current text selection in the popup. Useful to make edits to the text before searching with one of the engines.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Text box location</div>
+				<div class="setting-name" data-i18n="s_textFieldLocation_name">Text box location</div>
 				<div class="setting-value">
 					<select class="setting-input" name="selectionTextFieldLocation">
-						<option value="top">Top</option>
-						<option value="bottom">Bottom</option>
+						<option value="top" data-i18n="o_textFieldLoc_top">Top</option>
+						<option value="bottom" data-i18n="o_textFieldLoc_bottom">Bottom</option>
 					</select>
 				</div>
-				<div class="setting-description">Location of the text field in the popup, above or below the search engines.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_textFieldLocation_desc">Location of the text field in the popup, above or below the search engines.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Display in a single row</div>
+				<div class="setting-name" data-i18n="s_singleRow_name">Display in a single row</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="useSingleRow" autocomplete="off" checked>
 				</div>
-				<div class="setting-description">Places all search engines in a single row, instead of a grid.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_singleRow_desc">Places all search engines in a single row, instead of a grid.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Number of icons per row in grid</div>
+				<div class="setting-name" data-i18n="s_iconsPerRow_name">Number of icons per row in grid</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="nPopupIconsPerRow" min="1">
 				</div>
-				<div class="setting-description">Max number of search engines per row in grid display.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconsPerRow_desc">Max number of search engines per row in grid display.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Icon alignment in grid</div>
+				<div class="setting-name" data-i18n="s_iconAlignment_name">Icon alignment in grid</div>
 				<div class="setting-value">
 					<select class="setting-input" name="iconAlignmentInGrid">
-						<option value="left">Left</option>
-						<option value="middle">Middle</option>
-						<option value="right">Right</option>
+						<option value="left" data-i18n="o_align_left">Left</option>
+						<option value="middle" data-i18n="o_align_middle">Middle</option>
+						<option value="right" data-i18n="o_align_right">Right</option>
 					</select>
 				</div>
-				<div class="setting-description">Specifies how to align icons when a row is not full in grid display.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconAlignment_desc">Specifies how to align icons when a row is not full in grid display.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Icon size</div>
+				<div class="setting-name" data-i18n="s_iconSize_name">Icon size</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupItemSize" min="0">
 				</div>
-				<div class="setting-description">Search engine icon size in pixels.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconSize_desc">Search engine icon size in pixels.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Separator width</div>
+				<div class="setting-name" data-i18n="s_separatorWidth_name">Separator width</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupSeparatorWidth" min="0">
 				</div>
-				<div class="setting-description">Separator icon width as a percentage of icon size.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_separatorWidth_desc">Separator icon width as a percentage of icon size.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Icon horizontal padding</div>
+				<div class="setting-name" data-i18n="s_iconPaddingH_name">Icon horizontal padding</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupItemPadding" min="0">
 				</div>
-				<div class="setting-description">Search engine icon horizontal padding (left and right) in pixels.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconPaddingH_desc">Search engine icon horizontal padding (left and right) in pixels.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Icon vertical padding</div>
+				<div class="setting-name" data-i18n="s_iconPaddingV_name">Icon vertical padding</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupItemVerticalPadding" min="0">
 				</div>
-				<div class="setting-description">Search engine icon vertical padding (top and bottom) in pixels.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconPaddingV_desc">Search engine icon vertical padding (top and bottom) in pixels.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Icon hover behaviour</div>
+				<div class="setting-name" data-i18n="s_iconHover_name">Icon hover behaviour</div>
 				<div class="setting-value">
 					<select class="setting-input" name="popupItemHoverBehaviour">
-						<option value="nothing">Nothing (no hover effect)</option>
-						<option value="highlight">Highlight-only</option>
-						<option value="highlight-and-move">Highlight & Move</option>
-						<option value="scale">Scale</option>
+						<option value="nothing" data-i18n="o_hover_nothing">Nothing (no hover effect)</option>
+						<option value="highlight" data-i18n="o_hover_highlight">Highlight-only</option>
+						<option value="highlight-and-move" data-i18n="o_hover_highlightMove">Highlight & Move</option>
+						<option value="scale" data-i18n="o_hover_scale">Scale</option>
 					</select>
 				</div>
-				<div class="setting-description">What happens to hovered search engine icons.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconHover_desc">What happens to hovered search engine icons.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Icon roundness</div>
+				<div class="setting-name" data-i18n="s_iconRoundness_name">Icon roundness</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupItemBorderRadius" min="0">
 				</div>
-				<div class="setting-description">Icon border radius in pixels. Makes icons more or less round. NOTE: this will likely be unnoticeable on icons without a background.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_iconRoundness_desc">Icon border radius in pixels. Makes icons more or less round. NOTE: this will likely be unnoticeable on icons without a background.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup background color</div>
+				<div class="setting-name" data-i18n="s_popupBgColor_name">Popup background color</div>
 				<div class="setting-value">
 					<input type="color" name="popupBackgroundColorPicker">
 					<input class="setting-input" type="text" name="popupBackgroundColor">
 				</div>
-				<div class="setting-description">Color for the popup background. Supports transparency using #rrggbbaa.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupBgColor_desc">Color for the popup background. Supports transparency using #rrggbbaa.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup highlight color</div>
+				<div class="setting-name" data-i18n="s_popupHighlightColor_name">Popup highlight color</div>
 				<div class="setting-value">
 					<input type="color" name="popupHighlightColorPicker">
 					<input class="setting-input" type="text" name="popupHighlightColor">
 				</div>
-				<div class="setting-description">Color for the popup highlight. Supports transparency using #rrggbbaa.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupHighlightColor_desc">Color for the popup highlight. Supports transparency using #rrggbbaa.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup horizontal padding</div>
+				<div class="setting-name" data-i18n="s_popupPaddingX_name">Popup horizontal padding</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupPaddingX" min="0">
 				</div>
-				<div class="setting-description">Popup left/right padding, in pixels.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupPaddingX_desc">Popup left/right padding, in pixels.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup vertical padding</div>
+				<div class="setting-name" data-i18n="s_popupPaddingY_name">Popup vertical padding</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupPaddingY" min="0">
 				</div>
-				<div class="setting-description">Popup top/bottom padding, in pixels.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupPaddingY_desc">Popup top/bottom padding, in pixels.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup horizontal offset</div>
+				<div class="setting-name" data-i18n="s_popupOffsetX_name">Popup horizontal offset</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupOffsetX">
 				</div>
-				<div class="setting-description">Popup horizontal offset from the default position, in pixels (positive values move right).</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupOffsetX_desc">Popup horizontal offset from the default position, in pixels (positive values move right).</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup vertical offset</div>
+				<div class="setting-name" data-i18n="s_popupOffsetY_name">Popup vertical offset</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupOffsetY">
 				</div>
-				<div class="setting-description">Popup vertical offset from the default position, in pixels (positive values move up).</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupOffsetY_desc">Popup vertical offset from the default position, in pixels (positive values move up).</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Popup roundness</div>
+				<div class="setting-name" data-i18n="s_popupRoundness_name">Popup roundness</div>
 				<div class="setting-value">
 					<input class="setting-input" type="number" name="popupBorderRadius" min="0">
 				</div>
-				<div class="setting-description">Popup border radius in pixels. Makes popup more or less round.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-description" data-i18n-html="s_popupRoundness_desc">Popup border radius in pixels. Makes popup more or less round.</div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Use custom CSS formatting (experimental)</div>
+				<div class="setting-name" data-i18n="s_customCss_name">Use custom CSS formatting (experimental)</div>
 				<div class="setting-value">
 					<input class="setting-input" type="checkbox" name="useCustomPopupCSS" autocomplete="off">
 				</div>
-				<div class="setting-description">If you know CSS you can apply any formatting you want to the popup, such as custom icon hover animations or a background image. Please keep in mind that your custom CSS will be *added* to the internal CSS that SSS uses, and so might conflict with it.
+				<div class="setting-description" data-i18n-html="s_customCss_desc">If you know CSS you can apply any formatting you want to the popup, such as custom icon hover animations or a background image. Please keep in mind that your custom CSS will be *added* to the internal CSS that SSS uses, and so might conflict with it.
 				<br>
 				<br>
 				NOTE: If the popup's internal CSS changes in any future update, this option may disable itself to avoid problems.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 
 			<div class="setting hidden indent">
-				<div class="setting-name">Custom CSS</div>
+				<div class="setting-name" data-i18n="s_customCssField_name">Custom CSS</div>
 				<div class="setting-value" style="z-index: 1;">
 					<textarea class="setting-input" name="customPopupCSS" style="font-size: 12px;"></textarea>
 				</div>
 				<div class="setting-description"></div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 		</div>
 	</div>
 
 	<div class="section collapsed-section" id="section_contextMenu">
-		<div class="section-name">Context menu</div>
+		<div class="section-name" data-i18n="section_contextMenu">Context menu</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-description">The context menu is always enabled. When you right click the page with text selected, the "Swift Selection Search" submenu lists the same engines as the popup (the ones enabled with the "P." checkbox in the "Search engines" section).</div>
+				<div class="setting-description" data-i18n-html="s_contextMenu_desc">The context menu is always enabled. When you right click the page with text selected, the "Swift Selection Search" submenu lists the same engines as the popup (the ones enabled with the "P." checkbox in the "Search engines" section).</div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Context menu left click behaviour</div>
+				<div class="setting-name" data-i18n="s_contextMenuBehaviour_name">Context menu left click behaviour</div>
 				<div class="setting-value">
 					<select class="setting-input" name="contextMenuItemBehaviour">
-						<option value="this-tab">Open in this tab</option>
-						<option value="new-tab">Open in new tab</option>
-						<option value="new-bg-tab">Open in new background tab</option>
-						<option value="new-tab-next">Open in new tab (next to current tab)</option>
-						<option value="new-bg-tab-next">Open in new background tab (next to current tab)</option>
-						<option value="new-window">Open in new window</option>
+						<option value="this-tab" data-i18n="o_open_thisTab">Open in this tab</option>
+						<option value="new-tab" data-i18n="o_open_newTab">Open in new tab</option>
+						<option value="new-bg-tab" data-i18n="o_open_newBgTab">Open in new background tab</option>
+						<option value="new-tab-next" data-i18n="o_open_newTabNext">Open in new tab (next to current tab)</option>
+						<option value="new-bg-tab-next" data-i18n="o_open_newBgTabNext">Open in new background tab (next to current tab)</option>
+						<option value="new-window" data-i18n="o_open_newWindow">Open in new window</option>
 					</select>
 				</div>
-				<div class="setting-description">What to do when a search engine is clicked in the context menu.
+				<div class="setting-description" data-i18n-html="s_contextMenuBehaviour_desc">What to do when a search engine is clicked in the context menu.
 					<br>NOTE: Chrome context-menu items only report left clicks, so there are no separate right/middle click behaviours.</div>
-				<div class="setting-reset"><input type="button" value="Default"></div>
+				<div class="setting-reset"><input type="button" value="Default" data-i18n-value="button_default"></div>
 			</div>
 		</div>
 	</div>
 
 	<div class="section collapsed-section" id="section_storageAndBackup">
-		<div class="section-name">Storage & backup</div>
+		<div class="section-name" data-i18n="section_storage">Storage & backup</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name">Storage size</div>
+				<div class="setting-name" data-i18n="s_storageSize_name">Storage size</div>
 				<div class="setting-value">
 					<span id="storage-size" class="warn-when-over-storage-limit"></span>
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_storageSize_desc">
 					This is an estimate of the Chrome Sync storage used by your SSS engines and options. <span class="warn-when-over-storage-limit">Engines with "data:image" icons tend to occupy a lot of space.</span> The actual size may differ slightly.
 				</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Sync options (upload)</div>
+				<div class="setting-name" data-i18n="s_syncUpload_name">Sync options (upload)</div>
 				<div class="setting-value">
-					<input type="button" name="saveSettingsToSyncButton" value="Save to Sync" class="warn-when-over-storage-limit">
+					<input type="button" name="saveSettingsToSyncButton" value="Save to Sync" class="warn-when-over-storage-limit" data-i18n-value="b_saveToSync">
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_syncUpload_desc">
 					Saves all SSS options and engines to Chrome Sync. Chrome will sync this data between signed-in Chrome profiles when extension syncing is enabled. <span class="warn-when-over-storage-limit">The total must stay below Chrome's 100KB sync-storage limit. If it is too large, remove "data:image" icons or other extremely long URLs from your engines.</span>
 				</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Sync options (download)</div>
+				<div class="setting-name" data-i18n="s_syncDownload_name">Sync options (download)</div>
 				<div class="setting-value">
-					<input type="button" name="loadSettingsFromSyncButton" value="Load from Sync">
+					<input type="button" name="loadSettingsFromSyncButton" value="Load from Sync" data-i18n-value="b_loadFromSync">
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_syncDownload_desc">
 					Loads previously saved SSS options and engines from Chrome Sync. This will overwrite all existing options and engines!
 				</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Export options to file</div>
+				<div class="setting-name" data-i18n="s_export_name">Export options to file</div>
 				<div class="setting-value">
-					<input type="button" name="exportSettingsToFileButton" value="Export to file">
+					<input type="button" name="exportSettingsToFileButton" value="Export to file" data-i18n-value="b_exportToFile">
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_export_desc">
 					Exports all SSS options and engines to a file.
 				</div>
 				<div class="setting-reset"></div>
 			</div>
 
 			<div class="setting">
-				<div class="setting-name">Import options from file</div>
+				<div class="setting-name" data-i18n="s_import_name">Import options from file</div>
 				<div class="setting-value">
-					<input type="button" name="importSettingsFromFileButton" value="Import from file">
+					<input type="button" name="importSettingsFromFileButton" value="Import from file" data-i18n-value="b_importFromFile">
 					<input name="importSettingsFromFileButton_real" type="file" accept=".json" style="display: none"/>
 				</div>
-				<div class="setting-description">
+				<div class="setting-description" data-i18n-html="s_import_desc">
 					Imports SSS options and engines from a file (previously exported). This will override all existing options and engines!
 				</div>
 				<div class="setting-reset"></div>
@@ -1261,15 +1280,15 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 	</div>
 
 	<div class="section collapsed-section" id="section_reset">
-		<div class="section-name">Reset</div>
+		<div class="section-name" data-i18n="section_reset">Reset</div>
 
 		<div class="section-settings">
 			<div class="setting">
-				<div class="setting-name">Reset all options</div>
+				<div class="setting-name" data-i18n="s_reset_name">Reset all options</div>
 				<div class="setting-value">
-					<input type="button" name="resetSettingsButton" value="Reset options">
+					<input type="button" name="resetSettingsButton" value="Reset options" data-i18n-value="b_resetOptions">
 				</div>
-				<div class="setting-description">Resets all options except search engines to their defaults (as if running SSS for the first time).</div>
+				<div class="setting-description" data-i18n-html="s_reset_desc">Resets all options except search engines to their defaults (as if running SSS for the first time).</div>
 				<div class="setting-reset"></div>
 			</div>
 		</div>
@@ -1293,8 +1312,8 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 			<div id="group-available-engines-container"></div>
 		</div>
 		<div id="group-popup-footer">
-			<input type="button" value="Save" id="group-popup-save-button">
-			<input type="button" value="Cancel" id="group-popup-cancel-button">
+			<input type="button" value="Save" id="group-popup-save-button" data-i18n-value="b_save">
+			<input type="button" value="Cancel" id="group-popup-cancel-button" data-i18n-value="b_cancel">
 		</div>
 	</div>
 </div>
@@ -1313,6 +1332,7 @@ or loading the user settings, is provided by settings.ts and possibly some helpe
 </template>
 
 <script src="../libs/Sortable.js"></script>
+<script src="../i18n.js"></script>
 <script src="settings.js"></script>
 </body>
 
